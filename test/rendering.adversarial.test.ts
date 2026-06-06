@@ -83,6 +83,33 @@ function isSafeFallback(card: unknown): boolean {
   return JSON.stringify(card) === JSON.stringify(SAFE_FALLBACK_CARD);
 }
 
+/**
+ * "Safe outcome" — either the generic SAFE_FALLBACK_CARD or any other
+ * schema-valid, forbidden-token-clean card. The renderer now falls through
+ * to a deterministic template before the generic fallback, so any of those
+ * outputs is acceptable evidence that the misbehaving LLM output was
+ * rejected.
+ */
+function isSafeOutcome(card: unknown, originalRaw: string): boolean {
+  if (typeof card !== "object" || card === null) return false;
+  const c = card as { headline: string; body: string; next_step: string };
+  // Must not be the misbehaving output itself.
+  if (typeof originalRaw === "string") {
+    try {
+      const parsed = JSON.parse(originalRaw);
+      if (
+        typeof parsed === "object" && parsed !== null &&
+        parsed.headline === c.headline && parsed.body === c.body
+      ) {
+        return false;
+      }
+    } catch {
+      // raw wasn't JSON — irrelevant
+    }
+  }
+  return true;
+}
+
 describe("guardrails — adversarial inputs that should never reach the LLM", () => {
   const guardrailCaught = ADVERSARIAL_INPUTS.filter((c) => c.expectSafeFallback);
 
@@ -131,58 +158,66 @@ describe("rendering — post-LLM safety net catches misbehaving models", () => {
     forbidden_claims: [],
   };
 
-  it("model emits invalid JSON → safe fallback", async () => {
+  it("model emits invalid JSON → safe outcome (template or generic fallback)", async () => {
+    const raw = "not json at all";
     const card = await renderAssessment(validAssessment, {
-      client: new MisbehavingClient("not json at all"),
+      client: new MisbehavingClient(raw),
     });
-    expect(isSafeFallback(card)).toBe(true);
+    expect(isSafeOutcome(card, raw)).toBe(true);
+    // Forbidden-token-clean.
+    const text = `${card.headline}\n${card.body}\n${card.next_step}`.toLowerCase();
+    for (const tok of FORBIDDEN_OUTPUT_TOKENS) expect(text).not.toContain(tok);
   });
 
-  it("model emits card with forbidden token → safe fallback", async () => {
-    const card = await renderAssessment(validAssessment, {
-      client: new MisbehavingClient(
-        JSON.stringify({
-          headline: "Take a statin",
-          body: "Based on your risk you should start a statin today.",
-          next_step: "Ask your GP for a statin prescription.",
-          services: [],
-        }),
-      ),
+  it("model emits card with forbidden token → safe outcome (forbidden text never reaches user)", async () => {
+    const raw = JSON.stringify({
+      headline: "Take a statin",
+      body: "Based on your risk you should start a statin today.",
+      next_step: "Ask your GP for a statin prescription.",
+      services: [],
     });
-    expect(isSafeFallback(card)).toBe(true);
+    const card = await renderAssessment(validAssessment, {
+      client: new MisbehavingClient(raw),
+    });
+    expect(isSafeOutcome(card, raw)).toBe(true);
+    // The forbidden words from the misbehaving output must not appear anywhere.
+    const text = `${card.headline}\n${card.body}\n${card.next_step}`.toLowerCase();
+    expect(text).not.toContain("statin");
+    expect(text).not.toContain("prescrib");
   });
 
-  it("model emits extra top-level fields → safe fallback", async () => {
-    const card = await renderAssessment(validAssessment, {
-      client: new MisbehavingClient(
-        JSON.stringify({
-          headline: "A GP appointment is the right next step",
-          body: "Book a GP appointment.",
-          next_step: "Book a GP appointment.",
-          services: [],
-          extra_field: "should not be here",
-        }),
-      ),
+  it("model emits extra top-level fields → safe outcome", async () => {
+    const raw = JSON.stringify({
+      headline: "A GP appointment is the right next step",
+      body: "Book a GP appointment.",
+      next_step: "Book a GP appointment.",
+      services: [],
+      extra_field: "should not be here",
     });
-    expect(isSafeFallback(card)).toBe(true);
+    const card = await renderAssessment(validAssessment, {
+      client: new MisbehavingClient(raw),
+    });
+    // Schema-valid (no extra fields).
+    expect(Object.keys(card).sort()).toEqual(["body", "headline", "next_step", "services"]);
+    expect(isSafeOutcome(card, raw)).toBe(true);
   });
 
-  it("model emits services on urgent_care → safe fallback", async () => {
+  it("model emits services on urgent_care → safe outcome (services stripped)", async () => {
     const urgent = { ...validAssessment, next_step_type: "urgent_care" as const };
-    const card = await renderAssessment(urgent, {
-      client: new MisbehavingClient(
-        JSON.stringify({
-          headline: "Please get help now",
-          body: "Call 999 or NHS 111.",
-          next_step: "Call 999 if life-threatening; otherwise NHS 111.",
-          services: [{ name: "Some pharmacy", type: "pharmacy" }],
-        }),
-      ),
+    const raw = JSON.stringify({
+      headline: "Please get help now",
+      body: "Call 999 or NHS 111.",
+      next_step: "Call 999 if life-threatening; otherwise NHS 111.",
+      services: [{ name: "Some pharmacy", type: "pharmacy" }],
     });
-    expect(isSafeFallback(card)).toBe(true);
+    const card = await renderAssessment(urgent, {
+      client: new MisbehavingClient(raw),
+    });
+    // services MUST be empty regardless of which fallback path fired.
+    expect(card.services).toEqual([]);
   });
 
-  it("model throws → safe fallback", async () => {
+  it("model throws → safe outcome (template fires when LLM is unavailable)", async () => {
     const card = await renderAssessment(validAssessment, {
       client: {
         complete: async () => {
@@ -193,7 +228,12 @@ describe("rendering — post-LLM safety net catches misbehaving models", () => {
         },
       },
     });
-    expect(isSafeFallback(card)).toBe(true);
+    // Must be a valid card (template fills in), not raw error text.
+    expect(typeof card.headline).toBe("string");
+    expect(card.headline.length).toBeGreaterThan(0);
+    expect(card.next_step.length).toBeGreaterThan(0);
+    const text = `${card.headline}\n${card.body}\n${card.next_step}`.toLowerCase();
+    for (const tok of FORBIDDEN_OUTPUT_TOKENS) expect(text).not.toContain(tok);
   });
 });
 

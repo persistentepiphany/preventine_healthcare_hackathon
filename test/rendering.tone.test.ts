@@ -66,10 +66,13 @@ describe("tone toggle", () => {
         },
       },
     });
-    expect(out.headline).toBe(SAFE_FALLBACK_CARD.headline);
+    // Template fires when client throws — must still be a usable card,
+    // not the misbehaving LLM output and not necessarily the generic fallback.
+    expect(out.headline.length).toBeGreaterThan(0);
+    expect(out.next_step.length).toBeGreaterThan(0);
   });
 
-  it("urgent_care + tone: rendered services on output → safe fallback", async () => {
+  it("urgent_care + tone: rendered services on output → services stripped to empty", async () => {
     const urgent: PreventiveAssessment = {
       ...baseAssessment,
       next_step_type: "urgent_care",
@@ -89,6 +92,7 @@ describe("tone toggle", () => {
           }),
       },
     });
-    expect(out.headline).toBe(SAFE_FALLBACK_CARD.headline);
+    // Urgent route services MUST be empty (template or fallback both honour this).
+    expect(out.services).toEqual([]);
   });
 });

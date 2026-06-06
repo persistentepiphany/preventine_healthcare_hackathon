@@ -2,6 +2,7 @@ import type { PreventiveAssessment } from "../rules/types.js";
 import { type CardJson, isCardJson } from "./card_schema.js";
 import { containsForbiddenToken, validateAssessment } from "./guardrails.js";
 import { SAFE_FALLBACK_CARD } from "./safe_fallback.js";
+import { renderFromTemplate } from "./template_fallback.js";
 import { SYSTEM_PROMPT } from "./system_prompt.js";
 import { FEW_SHOT_MESSAGES } from "./few_shot.js";
 import { ZaiHttpClient, type ZaiClient, type ZaiMessage } from "./zai_client.js";
@@ -25,16 +26,29 @@ export async function renderAssessment(
     }
   }
 
-  const client = options.client ?? new ZaiHttpClient();
+  let client: ZaiClient | null;
+  try {
+    client = options.client ?? new ZaiHttpClient();
+  } catch {
+    // ZaiHttpClient constructor throws when ZAI_API_KEY is unset.
+    // Fall through to the deterministic template — no LLM, no balance needed.
+    return cardOrFallback(renderFromTemplate(assessment));
+  }
 
   let raw: string;
   try {
     raw = await client.complete(JSON.stringify(assessment));
   } catch {
-    return cloneCard(SAFE_FALLBACK_CARD);
+    // z.ai threw — out of balance, network down, timeout, etc.
+    // Try the deterministic template before giving up to the generic fallback.
+    return cardOrFallback(renderFromTemplate(assessment));
   }
 
   return applyCardGuardChain(raw, assessment);
+}
+
+function cardOrFallback(card: CardJson | null): CardJson {
+  return card ?? cloneCard(SAFE_FALLBACK_CARD);
 }
 
 /**
@@ -59,7 +73,12 @@ export async function renderCardFromMessages(
     }
   }
 
-  const client = options.client ?? new ZaiHttpClient();
+  let client: ZaiClient | null;
+  try {
+    client = options.client ?? new ZaiHttpClient();
+  } catch {
+    return cardOrFallback(renderFromTemplate(assessment));
+  }
 
   let raw: string;
   try {
@@ -69,7 +88,7 @@ export async function renderCardFromMessages(
       { role: "user", content: JSON.stringify(assessment) },
     ]);
   } catch {
-    return cloneCard(SAFE_FALLBACK_CARD);
+    return cardOrFallback(renderFromTemplate(assessment));
   }
 
   return applyCardGuardChain(raw, assessment);
@@ -88,23 +107,23 @@ function applyCardGuardChain(raw: string, assessment: PreventiveAssessment): Car
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return cloneCard(SAFE_FALLBACK_CARD);
+    return cardOrFallback(renderFromTemplate(assessment));
   }
 
-  if (!isCardJson(parsed)) return cloneCard(SAFE_FALLBACK_CARD);
+  if (!isCardJson(parsed)) return cardOrFallback(renderFromTemplate(assessment));
 
   const offending =
     containsForbiddenToken(parsed.headline) ??
     containsForbiddenToken(parsed.body) ??
     containsForbiddenToken(parsed.next_step);
-  if (offending !== null) return cloneCard(SAFE_FALLBACK_CARD);
+  if (offending !== null) return cardOrFallback(renderFromTemplate(assessment));
 
   if (assessment.next_step_type === "urgent_care") {
     if (parsed.services.length > 0) {
-      return cloneCard(SAFE_FALLBACK_CARD);
+      return cardOrFallback(renderFromTemplate(assessment));
     }
     if (urgentTextLeaks(parsed)) {
-      return cloneCard(SAFE_FALLBACK_CARD);
+      return cardOrFallback(renderFromTemplate(assessment));
     }
   }
 
