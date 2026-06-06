@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "scenario": "Existing diabetes diagnosis — NHS Health Check not applicable. Engine should emit eligibility 'not_eligible_existing_condition' and route to ask_gp_or_pharmacy (cholesterol missing) or gp_review.",
+    "postcode": "BS1 1AD (Bristol)",
+    "expectedRoute": "ask_gp_or_pharmacy_about_measurements",
+    "expectedCard": "Cholesterol missing — pharmacy or GP route. NHS Health Check NOT mentioned because diabetes excludes."
+  },
+  "patient": {
+    "age": 58,
+    "livesInEngland": true,
+    "sexAtBirth": "female",
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": true,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": true,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": true,
+    "systolicBp": 130,
+    "diastolicBp": 84,
+    "bmi": 29,
+    "waistCircumferenceCm": 96,
+    "smokingStatus": "never",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "BS1 1AD"
+}

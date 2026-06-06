@@ -1,0 +1,35 @@
+{
+  "_meta": {
+    "scenario": "Scotland postcode — services come from ODS (3 Edinburgh entries), but population data is England-only (Fingertips) so badge as 'missing', and waiting times fall back to generic NHS-wide prose (no Manchester text).",
+    "postcode": "EH1 1YZ (Edinburgh, Scotland)",
+    "expectedRoute": "pharmacy_bp_check (under English rules) — but livesInEngland=false would suppress, so trial it both ways",
+    "expectedCard": "Real Edinburgh services, no Fingertips indicators, generic waiting prose"
+  },
+  "patient": {
+    "age": 45,
+    "livesInEngland": false,
+    "sexAtBirth": "female",
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": true,
+    "systolicBp": 125,
+    "diastolicBp": 80,
+    "totalCholesterol": 4.6,
+    "hdlCholesterol": 1.4,
+    "bmi": 23,
+    "smokingStatus": "never",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "EH1 1YZ"
+}

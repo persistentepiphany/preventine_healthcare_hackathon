@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "scenario": "All routine measurements present, no red flags — expected route: gp_review with Health Check eligibility.",
+    "postcode": "M13 9PL (Manchester)",
+    "expectedRoute": "gp_review",
+    "expectedCard": "A routine check-in is a good next step — eligible for NHS Health Check"
+  },
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "sexAtBirth": "female",
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": true,
+    "systolicBp": 122,
+    "diastolicBp": 78,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL"
+}

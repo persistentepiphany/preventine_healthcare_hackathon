@@ -1,0 +1,35 @@
+{
+  "_meta": {
+    "scenario": "Red-flag symptom (chest pain) — expected route: urgent_care. Beats everything else including age/eligibility.",
+    "postcode": "M13 9PL (Manchester) — but services on the card MUST be empty for urgent",
+    "expectedRoute": "urgent_care",
+    "expectedCard": "Please get help now — 999 or NHS 111. No services list."
+  },
+  "patient": {
+    "age": 55,
+    "livesInEngland": true,
+    "sexAtBirth": "male",
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": true,
+    "systolicBp": 124,
+    "diastolicBp": 80,
+    "totalCholesterol": 5.0,
+    "hdlCholesterol": 1.2,
+    "bmi": 25,
+    "smokingStatus": "never",
+    "chestPain": true,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL"
+}

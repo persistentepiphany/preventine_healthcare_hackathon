@@ -1,0 +1,30 @@
+{
+  "_meta": {
+    "scenario": "Under 40 in England — too young for NHS Health Check. Expected eligibility: 'not_age_eligible'.",
+    "postcode": "NE1 4ST (Newcastle)",
+    "expectedRoute": "ask_gp_or_pharmacy_about_measurements",
+    "expectedCard": "Missing measurements card without Health Check mention (age <40)"
+  },
+  "patient": {
+    "age": 32,
+    "livesInEngland": true,
+    "sexAtBirth": "male",
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "smokingStatus": "current",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "NE1 4ST"
+}

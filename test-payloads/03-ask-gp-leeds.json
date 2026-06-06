@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "scenario": "BP present but cholesterol missing — expected route: ask_gp_or_pharmacy_about_measurements.",
+    "postcode": "LS1 4DT (Leeds)",
+    "expectedRoute": "ask_gp_or_pharmacy_about_measurements",
+    "expectedCard": "We need your cholesterol to complete the picture"
+  },
+  "patient": {
+    "age": 60,
+    "livesInEngland": true,
+    "sexAtBirth": "female",
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": true,
+    "systolicBp": 128,
+    "diastolicBp": 82,
+    "bmi": 24,
+    "waistCircumferenceCm": 88,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "LS1 4DT"
+}

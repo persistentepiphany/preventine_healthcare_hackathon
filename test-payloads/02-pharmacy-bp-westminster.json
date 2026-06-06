@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "scenario": "Missing blood pressure, age 40+ in England — expected route: pharmacy_bp_check.",
+    "postcode": "SW1A 1AA (Westminster, London)",
+    "expectedRoute": "pharmacy_bp_check",
+    "expectedCard": "A quick check can complete your picture — pharmacy BP check"
+  },
+  "patient": {
+    "age": 48,
+    "livesInEngland": true,
+    "sexAtBirth": "male",
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 5.1,
+    "hdlCholesterol": 1.3,
+    "bmi": 27,
+    "waistCircumferenceCm": 95,
+    "smokingStatus": "never",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "SW1A 1AA"
+}
