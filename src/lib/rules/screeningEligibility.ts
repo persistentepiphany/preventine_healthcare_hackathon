@@ -11,7 +11,7 @@
 import type {
   PatientInput,
   ScreeningMatch,
-} from './types';
+} from './types.js';
 
 /**
  * Assess screening eligibility - route hints only

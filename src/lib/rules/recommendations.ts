@@ -19,7 +19,7 @@ import type {
   MissingMeasurement,
   QriskReadiness,
   ScreeningType,
-} from './types';
+} from './types.js';
 
 /**
  * Service routing types for frontend
@@ -65,6 +65,10 @@ function serviceTypeToRouting(service: ServiceType): string {
       return 'GP';
     case 'screening':
       return 'Screening';
+    case 'emergency':
+      return 'Emergency services (999)';
+    case 'nhs_111':
+      return 'NHS 111';
   }
 }
 
@@ -214,6 +218,8 @@ export function toRecommendation(
     pharmacy: 'self_monitor',
     gp: 'review_with_clinician',
     screening: 'book_appointment',
+    emergency: 'contact_emergency',
+    nhs_111: 'review_with_clinician',
   };
 
   return {
@@ -223,7 +229,7 @@ export function toRecommendation(
     category,
     title: card.title,
     description: card.message,
-    applicableSince: new Date().toISOString().split('T')[0],
+    applicableSince: new Date().toISOString().slice(0, 10),
     target: card.target,
   };
 }

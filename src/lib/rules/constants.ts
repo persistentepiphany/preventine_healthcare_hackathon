@@ -5,7 +5,7 @@
  * These values are configurable and should be reviewed against NHS guidelines.
  */
 
-import type { SourceLabel } from './types';
+import type { SourceLabel } from './types.js';
 
 /**
  * Age thresholds for preventive care services

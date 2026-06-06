@@ -15,20 +15,20 @@ import type {
   SafetyNotice,
   GPSummaryItem,
   UrgencyLevel,
-} from './types';
+} from './types.js';
 import {
   SOURCE_LABELS,
   AI_GUARDRAILS,
   SAFETY_NOTICE,
   RULES_ENGINE_VERSION,
-} from './constants';
-import { assessUrgency } from './safetyRules';
-import { assessHealthCheckEligibility } from './healthCheckEligibility';
-import { assessScreeningEligibility } from './screeningEligibility';
-import { findMissingMeasurements } from './missingMeasurements';
-import { assessQriskReadiness } from './qriskReadiness';
-import { buildRecommendations as buildRecommendationCards, toRecommendation } from './recommendations';
-import { buildGpSummary as buildGpSummaryText } from './gpSummary';
+} from './constants.js';
+import { assessUrgency } from './safetyRules.js';
+import { assessHealthCheckEligibility } from './healthCheckEligibility.js';
+import { assessScreeningEligibility } from './screeningEligibility.js';
+import { findMissingMeasurements } from './missingMeasurements.js';
+import { assessQriskReadiness } from './qriskReadiness.js';
+import { buildRecommendations as buildRecommendationCards, toRecommendation } from './recommendations.js';
+import { buildGpSummary as buildGpSummaryText } from './gpSummary.js';
 
 /**
  * Build urgent assessment when red flags are detected
@@ -50,7 +50,7 @@ function buildUrgentAssessment(
   urgencyLevel: UrgencyLevel,
   redFlags: string[]
 ): PreventiveAssessment {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().slice(0, 10);
   const isEmergency = urgencyLevel === 'emergency';
 
   const urgency = {
@@ -169,7 +169,7 @@ export function assessPreventiveRoute(
   context: LocalContext
 ): PreventiveAssessment {
   const startTime = Date.now();
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().slice(0, 10);
 
   // 1. Assess urgency first (safety gate)
   const urgency = assessUrgency(input);
@@ -243,14 +243,14 @@ export function assessPreventiveRoute(
       type: 'warning',
       category: 'boundary',
       message: SAFETY_NOTICE,
-      avoid: AI_GUARDRAILS,
+      avoid: [...AI_GUARDRAILS],
     },
   ];
 
   // 10. Build AI guardrails
   const aiGuardrails = {
     safetyNotices: safetyNotice,
-    prohibitedTopics: AI_GUARDRAILS,
+    prohibitedTopics: [...AI_GUARDRAILS],
     deferToClinician: ['all clinical decisions'],
     maxRiskDisclosure: 'qualitative_only' as const,
   };

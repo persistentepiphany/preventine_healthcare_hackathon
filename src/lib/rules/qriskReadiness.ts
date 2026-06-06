@@ -8,7 +8,7 @@
  * scoring is performed here.
  */
 
-import type { PatientInput, QriskReadiness } from './types';
+import type { PatientInput, QriskReadiness } from './types.js';
 
 const DISCLAIMER = [
   'This is a prototype for educational purposes only.',

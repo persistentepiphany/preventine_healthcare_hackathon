@@ -14,7 +14,7 @@ import type {
   ScreeningMatch,
   LocalContext,
   MissingMeasurement,
-} from './types';
+} from './types.js';
 
 /**
  * Build GP summary string

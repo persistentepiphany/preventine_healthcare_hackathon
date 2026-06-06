@@ -15,5 +15,12 @@
     "sourceMap": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "test", "src/lib/**"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "src/lib/rules/demoCases.ts",
+    "src/lib/rules/finalReviewTest.ts",
+    "src/lib/rules/testDefensive.ts"
+  ]
 }

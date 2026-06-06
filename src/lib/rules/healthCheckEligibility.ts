@@ -8,7 +8,7 @@
  * Results indicate possible eligibility; confirm with healthcare provider.
  */
 
-import type { PatientInput, HealthCheckEligibility } from './types';
+import type { PatientInput, HealthCheckEligibility } from './types.js';
 
 /**
  * Assess NHS Health Check eligibility

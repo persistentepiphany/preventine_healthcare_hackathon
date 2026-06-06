@@ -1,46 +1,69 @@
-# `src/lib/rules/` — parked rules-safety modules
+# `src/lib/rules/` — modular rules-safety engine
 
-These files come from the `rules-engine-safety` branch and were merged into
-`nhs_data_ingestion` so both teams' work lives in one tree.
+Originally from the `rules-engine-safety` branch. **Now wired in** via the
+bridge at `src/rules/safety_bridge.ts` — see "How the two engines interact"
+below.
 
-**They are NOT wired into the demo.** `tsconfig.json` excludes `src/lib/**` from
-the build, and the HTTP router still uses `src/rules/engine.ts` as the frozen
-seam.
+## What's in here
 
-## Why parked, not deleted
+- `safetyRules.ts` — broader red-flag taxonomy (8 emergency flags, 7 urgent
+  flags) than the seam's three booleans.
+- `healthCheckEligibility.ts` — explanatory NHS Health Check eligibility.
+- `missingMeasurements.ts` — keyed missing-measurement list with priorities.
+- `qriskReadiness.ts` — QRISK readiness assessment (flags stale / missing
+  inputs without computing a score).
+- `screeningEligibility.ts` — population screening matches (cervical, breast,
+  colorectal, AAA, diabetic eye).
+- `recommendations.ts` — prioritized recommendation cards.
+- `gpSummary.ts` — GP-summary text builder.
+- `assessPreventiveRoute.ts` — orchestrator that runs all of the above.
+- `validation.ts`, `constants.ts`, `types.ts` — supporting infrastructure.
 
-This module implements a richer, more elaborate `PreventiveAssessment` shape
-(nested `urgency` / `healthCheckEligibility` / `qrisk` / `recommendations` /
-`gpSummary` / `safetyNotice` / `aiGuardrails` objects) plus modular sub-rules
-(`safetyRules`, `validation`, `screeningEligibility`, `qriskReadiness`, etc.).
-That logic is worth keeping — it's just incompatible with the seam the renderer
-and tests already depend on (`src/rules/types.ts`, flat: `risk_band`,
-`missing_measurements`, `eligible_for_health_check`, `next_step_type`,
-`forbidden_claims`).
+Excluded from build (own internal type bugs against their own types):
+`demoCases.ts`, `finalReviewTest.ts`, `testDefensive.ts`. Excluded in
+`tsconfig.json`; not deleted in case the authors want to recover them.
 
-## Why excluded from `tsc`
+## How the two engines interact
 
-Two reasons:
+The renderer's contract is `src/rules/types.ts` (flat seam). The bridge:
 
-1. The files import without `.js` extensions, which `NodeNext` rejects.
-2. Strict mode + `exactOptionalPropertyTypes` surface a number of latent
-   issues in `demoCases.ts` / `finalReviewTest.ts` / `testDefensive.ts` that
-   were not exercised by the rules-safety branch's looser tsconfig.
+1. Maps seam `PatientInput` → rich `PatientInput` (`smokingStatus: "current"`
+   → `smoker: true`, three red-flag booleans → red-flag string list, derived
+   `cholesterolRatio` from `totalCholesterol / hdlCholesterol`, etc.).
+2. Calls the rich orchestrator (`assessPreventiveRoute`).
+3. Projects the rich `PreventiveAssessment` back down to the flat seam shape
+   — same `risk_band` / `next_step_type` / `eligible_for_health_check` /
+   `missing_measurements` / `forbidden_claims` slots the renderer reads.
+4. Returns rich-only extras (screening matches, QRISK readiness, recommendation
+   cards, verbose urgency level) as a separate `extras` object that callers
+   can surface without touching the seam.
 
-Both are fixable; neither is worth doing under hackathon pressure when the
-demo path doesn't use this module.
+Both engines are pure deterministic functions. They can be run side-by-side
+on the same input as a second-opinion check.
 
-## If you want to wire this in later
+## How to run side-by-side
 
-Two viable paths:
+```bash
+npx tsx scripts/compare-engines.ts
+```
 
-- **Adapter**: build a thin function that takes the rich `PreventiveAssessment`
-  from `assessPreventiveRoute` here and projects it down to the frozen-seam
-  shape the renderer expects. The renderer stays unchanged.
-- **Replace**: change `src/rules/types.ts` to the rich shape, rewrite the
-  renderer's `card_schema.ts` / `guardrails.ts` / `system_prompt.ts` against
-  the new shape, and update every test. This is a much bigger change and would
-  reopen the seam.
+The script runs nine canonical patients (urgent, pharmacy BP, ask-route,
+GP-review, age boundaries) through **both** engines and prints any disagreement
+on the seam shape plus the rich-only extras. Current state: 9/9 agree on the
+seam shape, and the rich engine surfaces extra screening / QRISK / recommendation
+signal on top.
 
-Either way, first re-include `src/lib/**` in `tsconfig.json`, add `.js`
-extensions to the relative imports, and fix the demo-file type errors.
+## If you want to use the rich engine in production rendering
+
+`safety_bridge.ts` already gives you a seam-compatible `PreventiveAssessment`
+— you can drop it into the same renderer with no contract change. To do that:
+
+```ts
+import { assessViaSafetyEngine } from "../rules/safety_bridge.js";
+// ... instead of ...
+import { assessPreventiveRoute } from "../rules/engine.js";
+```
+
+The seam test (`test/seam.test.ts`) is the authoritative invariant — wire the
+bridge through the renderer and run the live z.ai suite to confirm cards still
+land in their expected lanes.

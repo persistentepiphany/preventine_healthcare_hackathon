@@ -5,7 +5,7 @@
  * preventive care assessment before GP/pharmacy/NHS Health Check conversation.
  */
 
-import type { PatientInput } from './types';
+import type { PatientInput, MissingMeasurement } from './types.js';
 
 /**
  * Find missing measurements for a patient

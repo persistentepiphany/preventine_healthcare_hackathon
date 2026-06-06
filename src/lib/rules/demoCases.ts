@@ -5,20 +5,20 @@
  * Each case includes input and expected high-level outputs.
  *
  * Usage:
- * import { runDemoCase } from './demoCases';
+ * import { runDemoCase } from './demoCases.js';
  * const result = runDemoCase('standardNhsHealthCheck');
  */
 
-import type { PatientInput } from './types';
+import type { PatientInput } from './types.js';
 import {
   assessUrgency,
   assessHealthCheckEligibility,
   assessQriskReadiness,
   findMissingMeasurements,
   assessScreeningEligibility,
-} from './index';
-import { buildRecommendations } from './recommendations';
-import { buildUrgentAssessment } from './assessPreventiveRoute';
+} from './index.js';
+import { buildRecommendations } from './recommendations.js';
+import { buildUrgentAssessment } from './assessPreventiveRoute.js';
 
 // ============================================================================
 // DEMO INPUTS

@@ -15,7 +15,7 @@ import type {
   QriskReadiness,
   Recommendation,
   SourceLabel,
-} from './types';
+} from './types.js';
 import {
   assessPreventiveRoute,
   assessUrgency,
@@ -23,7 +23,7 @@ import {
   assessScreeningEligibility,
   assessQriskReadiness,
   findMissingMeasurements,
-} from './index';
+} from './index.js';
 
 console.log('=== PreventPath Rules Engine Final Review ===\n');
 

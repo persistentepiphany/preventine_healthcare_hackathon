@@ -5,7 +5,7 @@
  * Identifies red-flag symptoms requiring immediate medical attention.
  */
 
-import type { PatientInput, UrgencyAssessment } from './types';
+import type { PatientInput, UrgencyAssessment } from './types.js';
 
 /**
  * Emergency red flags requiring 999 or A&E

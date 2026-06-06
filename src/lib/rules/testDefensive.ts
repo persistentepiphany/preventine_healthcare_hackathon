@@ -8,7 +8,7 @@ import {
   assessScreeningEligibility,
   findMissingMeasurements,
   assessQriskReadiness,
-} from './index';
+} from './index.js';
 
 console.log('=== Testing Defensive Handling ===\n');
 

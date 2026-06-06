@@ -53,7 +53,7 @@ export type {
   ValueOf,
   DeepPartial,
   DeepRequired,
-} from './types';
+} from './types.js';
 
 // ============================================================================
 // CONSTANTS
@@ -73,7 +73,7 @@ export {
   AI_GUARDRAILS,
   SOURCE_LABELS,
   NHS_SOURCES,
-} from './constants';
+} from './constants.js';
 
 // ============================================================================
 // SAFETY AND URGENCY
@@ -83,7 +83,7 @@ export {
   assessUrgency,
   getUrgencyAction,
   RED_FLAGS,
-} from './safetyRules';
+} from './safetyRules.js';
 
 // ============================================================================
 // VALIDATION
@@ -97,7 +97,7 @@ export {
   getSafeBoolean,
   getSafeNumber,
   validateAgeForHealthCheck,
-} from './validation';
+} from './validation.js';
 
 // ============================================================================
 // RULE MODULES
@@ -105,33 +105,33 @@ export {
 
 export {
   assessHealthCheckEligibility,
-} from './healthCheckEligibility';
+} from './healthCheckEligibility.js';
 
 export {
   assessQriskReadiness,
   isMissingForQrisk,
-} from './qriskReadiness';
+} from './qriskReadiness.js';
 
 export {
   findMissingMeasurements,
   hasHighPriorityMissing,
   countMissingByPriority,
-} from './missingMeasurements';
+} from './missingMeasurements.js';
 
 export {
   assessScreeningEligibility,
-} from './screeningEligibility';
+} from './screeningEligibility.js';
 
 export {
   buildRecommendations,
   toRecommendation,
-} from './recommendations';
+} from './recommendations.js';
 
 export {
   buildGpSummary,
-} from './gpSummary';
+} from './gpSummary.js';
 
 export {
   assessPreventiveRoute,
   buildUrgentAssessment,
-} from './assessPreventiveRoute';
+} from './assessPreventiveRoute.js';

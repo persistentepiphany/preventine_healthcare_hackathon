@@ -5,7 +5,7 @@
  * Prevents crashes from missing or invalid data.
  */
 
-import type { PatientInput } from './types';
+import type { PatientInput } from './types.js';
 
 /**
  * Validate and safely get age
