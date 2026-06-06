@@ -9,3 +9,5 @@ coverage/
 *.log
 data/sessions/
 samples/
+# Redundant — the unzipped Claude Design artifact is committed at ui/Preventive Care/
+ui/Preventive Care.zip
