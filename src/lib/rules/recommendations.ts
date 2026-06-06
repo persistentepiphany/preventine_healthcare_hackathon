@@ -28,7 +28,9 @@ export type ServiceType =
   | 'nhs_health_check'
   | 'pharmacy'
   | 'gp'
-  | 'screening';
+  | 'screening'
+  | 'emergency'
+  | 'nhs_111';
 
 /**
  * Frontend-friendly recommendation card

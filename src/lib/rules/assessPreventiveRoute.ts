@@ -16,8 +16,17 @@ import type {
   ScreeningType,
   PreventiveRoute,
   SafetyValidation,
+  PreventiveAssessment,
+  Recommendation,
+  PatientInput,
+  SourceLabel,
 } from './types';
-import { ROUTING_THRESHOLDS } from './constants';
+import {
+  ROUTING_THRESHOLDS,
+  SAFETY_NOTICE,
+  AI_GUARDRAILS,
+  SOURCE_LABELS,
+} from './constants';
 
 /**
  * Count high urgency items
@@ -222,6 +231,123 @@ export function isRouteRecommended(
     return true;
   }
   return false;
+}
+
+/**
+ * Build urgent assessment when red flags are detected
+ *
+ * This helper is used when assessUrgency returns 'urgent' or 'emergency'.
+ * It prevents the app from giving routine prevention advice when urgent symptoms are present.
+ *
+ * Returns a PreventiveAssessment with:
+ * - No routine prevention recommendations
+ * - healthCheckEligibility set to not_applicable
+ * - title: "Routine prevention paused"
+ * - Explanation of urgent/emergency warning signs
+ * - No screening matches
+ * - No missing measurements
+ * - QRISK status: not_calculated
+ * - One high-priority recommendation (Emergency → emergency, Urgent → nhs_111)
+ * - GP summary listing red flags and suggested action
+ * - SAFETY_NOTICE, AI_GUARDRAILS, and SOURCE_LABELS included
+ */
+export function buildUrgentAssessment(
+  input: PatientInput,
+  urgencyLevel: 'urgent' | 'emergency',
+  redFlags: string[]
+): PreventiveAssessment {
+  const today = new Date().toISOString().split('T')[0];
+
+  const isEmergency = urgencyLevel === 'emergency';
+
+  const title = 'Routine prevention paused';
+
+  const description = isEmergency
+    ? `Emergency warning signs were selected: ${redFlags.join(', ')}. Routine preventive care assessment has been paused.`
+    : `Urgent warning signs were selected: ${redFlags.join(', ')}. Routine preventive care assessment has been paused.`;
+
+  const recommendation: Recommendation = {
+    id: `urgent_assessment_${urgencyLevel}_${Date.now()}`,
+    action: isEmergency ? 'contact_emergency' : 'review_with_clinician',
+    priority: 'critical',
+    category: 'health_check',
+    title: isEmergency ? 'Seek emergency care immediately' : 'Contact NHS 111 for advice',
+    description: isEmergency
+      ? 'Call 999 or go to A&E immediately. Do not delay.'
+      : 'Use NHS 111 online or call 111 for urgent medical advice. Do not wait for a routine appointment.',
+    applicableSince: today,
+    target: 'patient',
+    timeToAction: isEmergency ? 'Immediate' : 'Same day',
+  };
+
+  const gpSummary: GPSummaryItem[] = [
+    {
+      category: 'urgency',
+      title,
+      details: `${urgencyLevel === 'emergency' ? 'Emergency' : 'Urgent'} red flag(s) reported: ${redFlags.join(', ')}. ${isEmergency ? 'Contact 999 or A&E immediately.' : 'Contact NHS 111 for advice.'} Routine preventive care assessment paused.`,
+      urgency: urgencyLevel,
+      actionRequired: true,
+      lastUpdated: today,
+    },
+  ];
+
+  const safetyNotices = [
+    {
+      type: 'prohibited' as const,
+      category: 'clinical' as const,
+      message: 'Routine preventive care assessment paused. Urgent or emergency symptoms take priority.',
+      avoid: ['routine prevention advice', 'screening recommendations', 'health check advice'],
+      recommended: ['prioritise immediate care', 'contact appropriate emergency service'],
+    },
+  ];
+
+  const aiGuardrails = {
+    safetyNotices,
+    prohibitedTopics: ['routine prevention'],
+    deferToClinician: ['all non-urgent matters'],
+    maxRiskDisclosure: 'none' as const,
+  };
+
+  const sources: SourceLabel[] = ['patient_reported', 'calculated'];
+
+  return {
+    urgency: {
+      level: urgencyLevel,
+      reason: description,
+      timeToAction: isEmergency ? 'Immediate' : 'Same day',
+      requiresEmergencyServices: isEmergency,
+    },
+    healthCheckEligibility: {
+      status: 'not_applicable',
+      ageEligible: false,
+      explanation: 'Routine NHS Health Check assessment paused due to urgent or emergency symptoms.',
+    },
+    screeningMatches: [],
+    missingMeasurements: [],
+    qrisk: {
+      ready: false,
+      missingData: [],
+      staleData: [],
+      status: 'not_calculated',
+      explanation: 'QRISK assessment not performed. Routine cardiovascular risk assessment paused due to urgent or emergency symptoms.',
+    },
+    recommendations: [recommendation],
+    gpSummary,
+    safetyNotice: safetyNotices,
+    aiGuardrails,
+    sources: sources.map(label => ({
+      label,
+      description: SOURCE_LABELS[label]?.label || label,
+      retrievedAt: new Date().toISOString(),
+      confidence: 'medium' as const,
+    })),
+    meta: {
+      version: '1.0.0',
+      assessedAt: new Date().toISOString(),
+      processingTimeMs: 0,
+      validationPassed: true,
+    },
+  };
 }
 
 /**
