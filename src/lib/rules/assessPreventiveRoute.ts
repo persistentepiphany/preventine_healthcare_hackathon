@@ -1,244 +1,39 @@
 /**
- * Preventive care routing module
+ * Main orchestrator for preventive care assessment
  *
- * Determines the appropriate route for preventive care:
- * - self_serve: Patient can manage through digital tools
- * - clinician_review: Requires clinician input/review
- * - urgent_referral: Needs urgent attention
- *
- * Routing is based on urgency, data completeness, and safety validation.
+ * Coordinates all rule modules in a deterministic sequence.
+ * No LLM, database, API, frontend, or service matcher calls.
+ * Pure function: input → structured output.
  */
 
 import type {
-  RulesEngineInput,
-  EligibilityResult,
-  GPSummaryItem,
-  ScreeningType,
-  PreventiveRoute,
-  SafetyValidation,
+  PatientInput,
+  LocalContext,
   PreventiveAssessment,
   Recommendation,
-  PatientInput,
-  SourceLabel,
+  Source,
+  SafetyNotice,
+  GPSummaryItem,
+  UrgencyLevel,
 } from './types';
 import {
-  ROUTING_THRESHOLDS,
-  SAFETY_NOTICE,
-  AI_GUARDRAILS,
   SOURCE_LABELS,
+  AI_GUARDRAILS,
+  SAFETY_NOTICE,
+  RULES_ENGINE_VERSION,
 } from './constants';
-
-/**
- * Count high urgency items
- */
-function countHighUrgency(eligibilityResults: EligibilityResult[]): number {
-  return eligibilityResults.filter(e => e.status === 'eligible' && e.urgency === 'urgent').length;
-}
-
-/**
- * Count medium urgency items
- */
-function countMediumUrgency(eligibilityResults: EligibilityResult[]): number {
-  return eligibilityResults.filter(e => e.status === 'eligible' && e.urgency === 'soonest').length;
-}
-
-/**
- * Count missing critical data items
- */
-function countMissingCriticalData(missingMeasurements: ScreeningType[]): number {
-  return missingMeasurements.filter(m =>
-    ['blood_pressure', 'cholesterol', 'bmi'].includes(m)
-  ).length;
-}
-
-/**
- * Assess route based on urgency
- */
-function assessRouteByUrgency(
-  eligibilityResults: EligibilityResult[],
-  missingMeasurements: ScreeningType[]
-): PreventiveRoute['primaryRoute'] {
-  const highUrgency = countHighUrgency(eligibilityResults);
-  const mediumUrgency = countMediumUrgency(eligibilityResults);
-  const missingCritical = countMissingCriticalData(missingMeasurements);
-
-  // Check urgent thresholds
-  if (highUrgency >= ROUTING_THRESHOLDS.HIGH_URGENCY_THRESHOLD) {
-    return 'urgent_referral';
-  }
-
-  // Check if missing critical data requires clinician involvement
-  if (missingCritical >= ROUTING_THRESHOLDS.MISSING_CRITICAL_DATA_THRESHOLD) {
-    return 'clinician_review';
-  }
-
-  // Check medium urgency threshold
-  if (mediumUrgency >= ROUTING_THRESHOLDS.MEDIUM_URGENCY_THRESHOLD) {
-    return 'clinician_review';
-  }
-
-  return 'self_serve';
-}
-
-/**
- * Generate reason for routing decision
- */
-function generateRouteReason(
-  route: PreventiveRoute['primaryRoute'],
-  eligibilityResults: EligibilityResult[],
-  missingMeasurements: ScreeningType[],
-  safetyValidation: SafetyValidation
-): string {
-  const parts: string[] = [];
-
-  const highUrgency = countHighUrgency(eligibilityResults);
-  const mediumUrgency = countMediumUrgency(eligibilityResults);
-  const missingCritical = countMissingCriticalData(missingMeasurements);
-
-  if (highUrgency > 0) {
-    parts.push(`${highUrgency} urgent screening(s) due`);
-  }
-
-  if (mediumUrgency > 0) {
-    parts.push(`${mediumUrgency} screening(s) due at earliest opportunity`);
-  }
-
-  if (missingCritical > 0) {
-    parts.push(`${missingCritical} critical measurement(s) missing`);
-  }
-
-  if (safetyValidation.requiresReview) {
-    const errorCount = safetyValidation.violations.filter(v => v.severity === 'error').length;
-    if (errorCount > 0) {
-      parts.push(`Data quality issues detected (${errorCount} error(s))`);
-    }
-  }
-
-  if (route === 'urgent_referral') {
-    return 'Urgent referral: ' + (parts.length > 0 ? parts.join(', ') : 'clinical review required');
-  }
-
-  if (route === 'clinician_review') {
-    return 'Clinician review required: ' + (parts.length > 0 ? parts.join(', ') : 'needs assessment');
-  }
-
-  if (parts.length > 0) {
-    return 'Patient can self-serve: ' + parts.join(', ');
-  }
-
-  return 'Patient can self-serve: measurements current, no urgent screenings due';
-}
-
-/**
- * Determine if safety layer review is required
- */
-function requiresSafetyLayerReview(
-  safetyValidation: SafetyValidation,
-  input: RulesEngineInput
-): boolean {
-  // Safety violations require review
-  if (safetyValidation.requiresReview) {
-    return true;
-  }
-
-  // Check for conditions that require clinician review
-  const sensitiveConditions = [
-    'pregnancy',
-    'cancer',
-    'terminal',
-  ];
-
-  if (input.existingConditions) {
-    const hasSensitiveCondition = input.existingConditions.some(condition =>
-      sensitiveConditions.some(sensitive =>
-        condition.toLowerCase().includes(sensitive)
-      )
-    );
-    if (hasSensitiveCondition) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-/**
- * Assess secondary route (optional follow-up)
- */
-function assessSecondaryRoute(
-  primaryRoute: PreventiveRoute['primaryRoute'],
-  eligibilityResults: EligibilityResult[]
-): PreventiveRoute['primaryRoute'] | undefined {
-  if (primaryRoute === 'urgent_referral') {
-    return undefined; // No secondary needed for urgent
-  }
-
-  if (primaryRoute === 'clinician_review') {
-    // If some items are low urgency, they could potentially be self-served
-    const lowUrgencyEligible = eligibilityResults.filter(e =>
-      e.status === 'eligible' && e.urgency === 'routine'
-    );
-    if (lowUrgencyEligible.length > 0) {
-      return 'self_serve';
-    }
-    return undefined;
-  }
-
-  // Primary is self_serve - check if any items need clinician review later
-  const soonestEligible = eligibilityResults.filter(e =>
-    e.status === 'eligible' && e.urgency === 'soonest'
-  );
-  if (soonestEligible.length > 0) {
-    return 'clinician_review';
-  }
-
-  return undefined;
-}
-
-/**
- * Main routing assessment function
- */
-export function assessPreventiveRoute(
-  input: RulesEngineInput,
-  eligibilityResults: EligibilityResult[],
-  missingMeasurements: ScreeningType[],
-  safetyValidation: SafetyValidation
-): PreventiveRoute {
-  const primaryRoute = assessRouteByUrgency(eligibilityResults, missingMeasurements);
-  const secondaryRoute = assessSecondaryRoute(primaryRoute, eligibilityResults);
-  const reason = generateRouteReason(primaryRoute, eligibilityResults, missingMeasurements, safetyValidation);
-  const requiresSafetyLayerReview = requiresSafetyLayerReview(safetyValidation, input);
-
-  return {
-    primaryRoute,
-    secondaryRoute,
-    reason,
-    requiresSafetyLayerReview,
-  };
-}
-
-/**
- * Check if a specific route is recommended for given input
- */
-export function isRouteRecommended(
-  route: PreventiveRoute['primaryRoute'],
-  preventiveRoute: PreventiveRoute
-): boolean {
-  if (preventiveRoute.primaryRoute === route) {
-    return true;
-  }
-  if (preventiveRoute.secondaryRoute === route) {
-    return true;
-  }
-  return false;
-}
+import { assessUrgency } from './safetyRules';
+import { assessHealthCheckEligibility } from './healthCheckEligibility';
+import { assessScreeningEligibility } from './screeningEligibility';
+import { findMissingMeasurements } from './missingMeasurements';
+import { assessQriskReadiness } from './qriskReadiness';
+import { buildRecommendations as buildRecommendationCards, toRecommendation } from './recommendations';
+import { buildGpSummary as buildGpSummaryText } from './gpSummary';
 
 /**
  * Build urgent assessment when red flags are detected
  *
  * This helper is used when assessUrgency returns 'urgent' or 'emergency'.
- * It prevents the app from giving routine prevention advice when urgent symptoms are present.
- *
  * Returns a PreventiveAssessment with:
  * - No routine prevention recommendations
  * - healthCheckEligibility set to not_applicable
@@ -247,24 +42,23 @@ export function isRouteRecommended(
  * - No screening matches
  * - No missing measurements
  * - QRISK status: not_calculated
- * - One high-priority recommendation (Emergency → emergency, Urgent → nhs_111)
+ * - One high-priority recommendation
  * - GP summary listing red flags and suggested action
- * - SAFETY_NOTICE, AI_GUARDRAILS, and SOURCE_LABELS included
  */
-export function buildUrgentAssessment(
+function buildUrgentAssessment(
   input: PatientInput,
-  urgencyLevel: 'urgent' | 'emergency',
+  urgencyLevel: UrgencyLevel,
   redFlags: string[]
 ): PreventiveAssessment {
   const today = new Date().toISOString().split('T')[0];
-
   const isEmergency = urgencyLevel === 'emergency';
 
-  const title = 'Routine prevention paused';
-
-  const description = isEmergency
-    ? `Emergency warning signs were selected: ${redFlags.join(', ')}. Routine preventive care assessment has been paused.`
-    : `Urgent warning signs were selected: ${redFlags.join(', ')}. Routine preventive care assessment has been paused.`;
+  const urgency = {
+    level: urgencyLevel,
+    reason: `${urgencyLevel === 'emergency' ? 'Emergency' : 'Urgent'} red flag(s) detected: ${redFlags.join(', ')}`,
+    timeToAction: isEmergency ? 'Immediate' : 'Same day',
+    requiresEmergencyServices: isEmergency,
+  };
 
   const recommendation: Recommendation = {
     id: `urgent_assessment_${urgencyLevel}_${Date.now()}`,
@@ -283,7 +77,7 @@ export function buildUrgentAssessment(
   const gpSummary: GPSummaryItem[] = [
     {
       category: 'urgency',
-      title,
+      title: 'Routine prevention paused',
       details: `${urgencyLevel === 'emergency' ? 'Emergency' : 'Urgent'} red flag(s) reported: ${redFlags.join(', ')}. ${isEmergency ? 'Contact 999 or A&E immediately.' : 'Contact NHS 111 for advice.'} Routine preventive care assessment paused.`,
       urgency: urgencyLevel,
       actionRequired: true,
@@ -291,10 +85,10 @@ export function buildUrgentAssessment(
     },
   ];
 
-  const safetyNotices = [
+  const safetyNotices: SafetyNotice[] = [
     {
-      type: 'prohibited' as const,
-      category: 'clinical' as const,
+      type: 'prohibited',
+      category: 'clinical',
       message: 'Routine preventive care assessment paused. Urgent or emergency symptoms take priority.',
       avoid: ['routine prevention advice', 'screening recommendations', 'health check advice'],
       recommended: ['prioritise immediate care', 'contact appropriate emergency service'],
@@ -308,15 +102,23 @@ export function buildUrgentAssessment(
     maxRiskDisclosure: 'none' as const,
   };
 
-  const sources: SourceLabel[] = ['patient_reported', 'calculated'];
+  const sources: Source[] = [
+    {
+      label: 'patient_reported',
+      description: SOURCE_LABELS.patient_reported.label,
+      retrievedAt: new Date().toISOString(),
+      confidence: 'medium',
+    },
+    {
+      label: 'calculated',
+      description: SOURCE_LABELS.calculated.label,
+      retrievedAt: new Date().toISOString(),
+      confidence: 'medium',
+    },
+  ];
 
   return {
-    urgency: {
-      level: urgencyLevel,
-      reason: description,
-      timeToAction: isEmergency ? 'Immediate' : 'Same day',
-      requiresEmergencyServices: isEmergency,
-    },
+    urgency,
     healthCheckEligibility: {
       status: 'not_applicable',
       ageEligible: false,
@@ -335,14 +137,9 @@ export function buildUrgentAssessment(
     gpSummary,
     safetyNotice: safetyNotices,
     aiGuardrails,
-    sources: sources.map(label => ({
-      label,
-      description: SOURCE_LABELS[label]?.label || label,
-      retrievedAt: new Date().toISOString(),
-      confidence: 'medium' as const,
-    })),
+    sources,
     meta: {
-      version: '1.0.0',
+      version: RULES_ENGINE_VERSION,
       assessedAt: new Date().toISOString(),
       processingTimeMs: 0,
       validationPassed: true,
@@ -351,14 +148,147 @@ export function buildUrgentAssessment(
 }
 
 /**
- * Get route description for display
+ * Assess preventive care route and generate complete assessment
+ *
+ * Orchestrates all rule modules in order:
+ * 1. assessUrgency(input)
+ * 2. If urgency is emergency or urgent, immediately return buildUrgentAssessment(...)
+ * 3. assessHealthCheckEligibility(input)
+ * 4. assessScreeningEligibility(input)
+ * 5. findMissingMeasurements(input)
+ * 6. assessQriskReadiness(input)
+ * 7. buildRecommendations(...)
+ * 8. buildGpSummary(...)
+ * 9. Return the full PreventiveAssessment object
+ *
+ * Deterministic: same input always produces same output.
+ * No external calls, no side effects.
  */
-export function getRouteDescription(route: PreventiveRoute['primaryRoute']): string {
-  const descriptions: Record<PreventiveRoute['primaryRoute'], string> = {
-    self_serve: 'Patient can manage through digital tools and self-booking',
-    clinician_review: 'Requires clinician input, review, or scheduling',
-    urgent_referral: 'Requires urgent clinical attention',
+export function assessPreventiveRoute(
+  input: PatientInput,
+  context: LocalContext
+): PreventiveAssessment {
+  const startTime = Date.now();
+  const today = new Date().toISOString().split('T')[0];
+
+  // 1. Assess urgency first (safety gate)
+  const urgency = assessUrgency(input);
+
+  // 2. Early return for emergency or urgent
+  if (urgency.level === 'emergency' || urgency.level === 'urgent') {
+    return buildUrgentAssessment(input, urgency.level, input.redFlags ?? []);
+  }
+
+  // 3. Assess NHS Health Check eligibility
+  const healthCheckEligibility = assessHealthCheckEligibility(input);
+
+  // 4. Assess population screening eligibility (route hints)
+  const screeningMatches = assessScreeningEligibility(input);
+
+  // 5. Find missing measurements
+  const missingMeasurements = findMissingMeasurements(input);
+
+  // 6. Assess QRISK readiness (educational estimate only)
+  const qrisk = assessQriskReadiness(input);
+
+  // 7. Build recommendations
+  const recommendationCards = buildRecommendationCards(
+    input,
+    healthCheckEligibility,
+    screeningMatches,
+    missingMeasurements,
+    qrisk
+  );
+
+  // Convert RecommendationCard[] to Recommendation[]
+  const recommendations: Recommendation[] = recommendationCards.map(card => {
+    const categoryMap = {
+      nhs_health_check: 'health_check' as const,
+      pharmacy: 'health_check' as const,
+      gp: 'health_check' as const,
+      screening: 'health_check' as const,
+      emergency: 'health_check' as const,
+      nhs_111: 'health_check' as const,
+    };
+    return toRecommendation(card, categoryMap[card.serviceType]);
+  });
+
+  // 8. Build GP summary text and convert to GPSummaryItem[]
+  const gpSummaryText = buildGpSummaryText(
+    input,
+    healthCheckEligibility,
+    screeningMatches,
+    missingMeasurements,
+    context
+  );
+
+  const gpSummary: GPSummaryItem[] = [
+    {
+      category: 'preventive_care',
+      title: 'Preventive care summary',
+      details: gpSummaryText,
+      urgency: urgency.level,
+      actionRequired: recommendations.some(r => r.priority === 'high' || r.priority === 'critical'),
+      lastUpdated: today,
+    },
+  ];
+
+  // 9. Build safety notices
+  const safetyNotice: SafetyNotice[] = [
+    {
+      type: 'warning',
+      category: 'boundary',
+      message: SAFETY_NOTICE,
+      avoid: AI_GUARDRAILS,
+    },
+  ];
+
+  // 10. Build AI guardrails
+  const aiGuardrails = {
+    safetyNotices: safetyNotice,
+    prohibitedTopics: AI_GUARDRAILS,
+    deferToClinician: ['all clinical decisions'],
+    maxRiskDisclosure: 'qualitative_only' as const,
   };
 
-  return descriptions[route];
+  // 11. Build data sources
+  const sources: Source[] = [
+    {
+      label: 'patient_reported',
+      description: SOURCE_LABELS.patient_reported.label,
+      retrievedAt: new Date().toISOString(),
+      confidence: 'medium',
+    },
+    {
+      label: 'calculated',
+      description: SOURCE_LABELS.calculated.label,
+      retrievedAt: new Date().toISOString(),
+      confidence: 'medium',
+    },
+  ];
+
+  // 12. Return complete PreventiveAssessment
+  return {
+    urgency,
+    healthCheckEligibility,
+    screeningMatches,
+    missingMeasurements,
+    qrisk,
+    recommendations,
+    gpSummary,
+    safetyNotice,
+    aiGuardrails,
+    sources,
+    meta: {
+      version: RULES_ENGINE_VERSION,
+      assessedAt: new Date().toISOString(),
+      processingTimeMs: Date.now() - startTime,
+      validationPassed: true,
+    },
+  };
 }
+
+/**
+ * Re-export buildUrgentAssessment for direct use if needed
+ */
+export { buildUrgentAssessment };
