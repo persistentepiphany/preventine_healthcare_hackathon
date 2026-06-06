@@ -133,7 +133,7 @@ export function buildRecommendations(
     });
   }
 
-  // Rule 4: Current smoker
+  // Rule 4: Current smoker (only if explicitly true, not if unknown)
   if (input.smoker === true) {
     recommendations.push({
       id: generateId('smoking', 'support'),
@@ -144,6 +144,8 @@ export function buildRecommendations(
       target: 'patient',
     });
   }
+  // Do NOT assume non-smoker if input.smoker is undefined
+  // Only add recommendation if we know they smoke
 
   // Rule 5: Screening matches
   for (const match of screening) {

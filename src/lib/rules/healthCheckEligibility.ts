@@ -19,17 +19,29 @@ import type { PatientInput, HealthCheckEligibility } from './types';
  * - Exclusions: hasCvd, hasDiabetes, hasKidneyDisease, hasHypertension, onStatins
  * - Any exclusion true: not eligible, list exclusions
  * - Age 40-74 and no exclusions: possibly eligible
+ *
+ * Defensive: Returns 'insufficient_information' if age is missing or invalid.
  */
 export function assessHealthCheckEligibility(input: PatientInput): HealthCheckEligibility {
   const { age, hasCvd, hasDiabetes, hasKidneyDisease, hasHypertension, onStatins } = input;
 
+  // Defensive: Validate age before use
+  if (age === undefined || age === null || isNaN(age) || age < 0 || age > 150) {
+    return {
+      status: 'insufficient_information',
+      ageEligible: false,
+      explanation: 'Age is missing or invalid. NHS Health Check eligibility cannot be determined without a valid age.',
+    };
+  }
+
   const exclusions: string[] = [];
 
-  if (hasCvd) exclusions.push('cardiovascular disease');
-  if (hasDiabetes) exclusions.push('diabetes');
-  if (hasKidneyDisease) exclusions.push('chronic kidney disease');
-  if (hasHypertension) exclusions.push('hypertension');
-  if (onStatins) exclusions.push('statins');
+  // Only add exclusions if explicitly true, not if unknown (undefined)
+  if (hasCvd === true) exclusions.push('cardiovascular disease');
+  if (hasDiabetes === true) exclusions.push('diabetes');
+  if (hasKidneyDisease === true) exclusions.push('chronic kidney disease');
+  if (hasHypertension === true) exclusions.push('hypertension');
+  if (onStatins === true) exclusions.push('statins');
 
   // Age below 40
   if (age < 40) {

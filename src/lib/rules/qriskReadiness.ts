@@ -28,6 +28,7 @@ export function assessQriskReadiness(input: PatientInput): QriskReadiness {
   const staleData: string[] = [];
 
   // 1. If existing CVD reported, primary prevention-style estimates are not appropriate
+  // Defensive: Only check if explicitly true, not if undefined (unknown)
   if (input.hasCvd === true) {
     return {
       ready: false,
@@ -39,11 +40,16 @@ export function assessQriskReadiness(input: PatientInput): QriskReadiness {
   }
 
   // 2. Check required inputs
+  // Defensive: Validate numeric values are actual numbers, not NaN
+  const systolicBpValid = typeof input.systolicBp === 'number' && !isNaN(input.systolicBp) && isFinite(input.systolicBp);
+  const cholesterolRatioValid = typeof input.cholesterolRatio === 'number' && !isNaN(input.cholesterolRatio) && isFinite(input.cholesterolRatio);
+  const bmiValid = typeof input.bmi === 'number' && !isNaN(input.bmi) && isFinite(input.bmi);
+
   const requiredChecks = [
-    { field: 'systolicBp', label: 'Blood pressure (systolic)', present: input.systolicBp !== undefined },
-    { field: 'cholesterolRatio', label: 'Cholesterol ratio', present: input.cholesterolRatio !== undefined },
+    { field: 'systolicBp', label: 'Blood pressure (systolic)', present: systolicBpValid },
+    { field: 'cholesterolRatio', label: 'Cholesterol ratio', present: cholesterolRatioValid },
     { field: 'smoker', label: 'Smoking status', present: typeof input.smoker === 'boolean' },
-    { field: 'bmi', label: 'Body mass index (BMI)', present: input.bmi !== undefined },
+    { field: 'bmi', label: 'Body mass index (BMI)', present: bmiValid },
     { field: 'sexAtBirth', label: 'Sex at birth', present: input.sexAtBirth !== undefined },
   ];
 
@@ -99,10 +105,15 @@ function buildExplanation(status: string, missingData: string[]): string {
  */
 export function isMissingForQrisk(input: PatientInput, field: keyof PatientInput): boolean {
   if (input.hasCvd === true) return false;
-  if (field === 'systolicBp') return input.systolicBp === undefined;
-  if (field === 'cholesterolRatio') return input.cholesterolRatio === undefined;
+
+  // Helper to check if numeric value is valid
+  const isValidNumber = (val: unknown): val is number =>
+    typeof val === 'number' && !isNaN(val) && isFinite(val);
+
+  if (field === 'systolicBp') return !isValidNumber(input.systolicBp);
+  if (field === 'cholesterolRatio') return !isValidNumber(input.cholesterolRatio);
   if (field === 'smoker') return typeof input.smoker !== 'boolean';
-  if (field === 'bmi') return input.bmi === undefined;
+  if (field === 'bmi') return !isValidNumber(input.bmi);
   if (field === 'sexAtBirth') return input.sexAtBirth === undefined;
   return false;
 }

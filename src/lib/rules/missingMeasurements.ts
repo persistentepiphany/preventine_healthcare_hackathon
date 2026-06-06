@@ -10,7 +10,7 @@ import type { PatientInput } from './types';
 /**
  * Missing measurement with context
  */
-export interface MissingMeasurement {
+export interface MissingMeasurementInternal {
   /** Unique identifier for the measurement */
   key: string;
 
@@ -33,8 +33,8 @@ export interface MissingMeasurement {
  * Identifies which preventive-care measurements are missing before
  * a proper GP/pharmacy/NHS Health Check conversation.
  */
-export function findMissingMeasurements(input: PatientInput): MissingMeasurement[] {
-  const missing: MissingMeasurement[] = [];
+export function findMissingMeasurements(input: PatientInput): MissingMeasurementInternal[] {
+  const missing: MissingMeasurementInternal[] = [];
 
   // 1. Blood pressure - high priority
   if (!input.systolicBp || !input.diastolicBp) {

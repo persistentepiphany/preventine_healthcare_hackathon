@@ -41,8 +41,14 @@ export function buildGpSummary(
 ): string {
   const parts: string[] = [];
 
-  // Age
-  parts.push(`I am ${input.age} years old.`);
+  // Defensive: Handle missing or invalid age
+  const age = input.age;
+  const hasValidAge = age !== undefined && age !== null && !isNaN(age) && age >= 0 && age <= 150;
+  if (hasValidAge) {
+    parts.push(`I am ${age} years old.`);
+  } else {
+    parts.push('My age information is missing or invalid.');
+  }
 
   // Postcode
   if (input.postcode) {

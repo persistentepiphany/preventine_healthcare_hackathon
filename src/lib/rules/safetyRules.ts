@@ -41,8 +41,13 @@ const URGENT_RED_FLAGS = new Set([
  * @returns Urgency assessment with level and recommended action
  */
 export function assessUrgency(input: PatientInput): UrgencyAssessment {
-  const emergencyFlags = input.redFlags?.filter(flag => EMERGENCY_RED_FLAGS.has(flag as never)) ?? [];
-  const urgentFlags = input.redFlags?.filter(flag => URGENT_RED_FLAGS.has(flag as never)) ?? [];
+  // Safely get red flags - empty array if missing or invalid
+  const redFlags = Array.isArray(input.redFlags)
+    ? input.redFlags.filter(flag => typeof flag === 'string')
+    : [];
+
+  const emergencyFlags = redFlags.filter(flag => EMERGENCY_RED_FLAGS.has(flag as never)) ?? [];
+  const urgentFlags = redFlags.filter(flag => URGENT_RED_FLAGS.has(flag as never)) ?? [];
 
   if (emergencyFlags.length > 0) {
     return {

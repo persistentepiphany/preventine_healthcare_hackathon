@@ -121,7 +121,24 @@ export {
   isMeasurementMissing,
   isMeasurementStale,
   getMeasurementPriority,
+  MissingMeasurementInternal,
 } from './missingMeasurements';
+
+export {
+  validateInput,
+  validateOutput,
+  sanitizeOutput,
+  validateCompleteOutput,
+  requiresSafetyReview,
+  getSafetySummary,
+  getSafeAge,
+  getSafeRedFlags,
+  getSafeSymptoms,
+  hasMinimumData,
+  getSafeBoolean,
+  getSafeNumber,
+  validateAgeForHealthCheck,
+} from './validation';
 
 export {
   assessScreeningEligibility,

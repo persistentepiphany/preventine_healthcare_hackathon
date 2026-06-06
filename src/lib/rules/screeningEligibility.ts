@@ -27,8 +27,16 @@ export function assessScreeningEligibility(
 ): ScreeningMatch[] {
   const matches: ScreeningMatch[] = [];
 
+  // Defensive: Return empty matches if age is missing or invalid
+  const age = input.age;
+  const hasValidAge = age !== undefined && age !== null && !isNaN(age) && age >= 0 && age <= 150;
+
+  if (!hasValidAge) {
+    return matches;
+  }
+
   // Cervical screening: hasCervix true, age 25-64
-  if (input.hasCervix === true && input.age >= 25 && input.age <= 64) {
+  if (input.hasCervix === true && age >= 25 && age <= 64) {
     matches.push({
       screeningType: 'cervical_screening',
       status: 'possibly_eligible',
@@ -41,7 +49,7 @@ export function assessScreeningEligibility(
   }
 
   // Bowel screening: age 50-74
-  if (input.age >= 50 && input.age <= 74) {
+  if (age >= 50 && age <= 74) {
     matches.push({
       screeningType: 'colorectal_screening',
       status: 'possibly_eligible',
@@ -54,7 +62,7 @@ export function assessScreeningEligibility(
   }
 
   // Breast screening: sexAtBirth female, age 50-70
-  if (input.sexAtBirth === 'female' && input.age >= 50 && input.age <= 70) {
+  if (input.sexAtBirth === 'female' && age >= 50 && age <= 70) {
     matches.push({
       screeningType: 'breast_screening',
       status: 'possibly_eligible',
@@ -67,7 +75,7 @@ export function assessScreeningEligibility(
   }
 
   // Diabetic eye screening: hasDiabetes true, age 12+
-  if (input.hasDiabetes === true && input.age >= 12) {
+  if (input.hasDiabetes === true && age >= 12) {
     matches.push({
       screeningType: 'diabetic_eye_screening',
       status: 'possibly_eligible',

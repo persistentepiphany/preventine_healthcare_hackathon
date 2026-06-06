@@ -176,7 +176,11 @@ export function assessPreventiveRoute(
 
   // 2. Early return for emergency or urgent
   if (urgency.level === 'emergency' || urgency.level === 'urgent') {
-    return buildUrgentAssessment(input, urgency.level, input.redFlags ?? []);
+    // Defensive: Safely get red flags (empty array if missing/invalid)
+    const redFlags = Array.isArray(input.redFlags)
+      ? input.redFlags.filter(flag => typeof flag === 'string')
+      : [];
+    return buildUrgentAssessment(input, urgency.level, redFlags);
   }
 
   // 3. Assess NHS Health Check eligibility
