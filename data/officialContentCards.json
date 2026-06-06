@@ -1,0 +1,44 @@
+{
+  "_meta": {
+    "compiledOn": "2026-06-06",
+    "note": "Static NHS content cards. The NHS Website Content API sandbox returned 503 on both probes (see source-verification.md), so we ship these from cache. URLs verified live against www.nhs.uk on the same date."
+  },
+  "cards": [
+    {
+      "id": "nhs-health-check",
+      "title": "NHS Health Check",
+      "url": "https://www.nhs.uk/conditions/nhs-health-check/",
+      "summary": "A free check-up of your overall health for adults aged 40-74 in England who don't already have certain long-term conditions. It checks your circulation and heart health, and is normally offered every five years."
+    },
+    {
+      "id": "pharmacy-bp-check",
+      "title": "Free pharmacy blood pressure check",
+      "url": "https://www.nhs.uk/conditions/high-blood-pressure-hypertension/diagnosis/",
+      "summary": "If you're 40 or over and live in England, you can get your blood pressure checked for free at most community pharmacies. No appointment is needed and you don't need to be registered with that pharmacy."
+    },
+    {
+      "id": "high-cholesterol",
+      "title": "High cholesterol",
+      "url": "https://www.nhs.uk/conditions/high-cholesterol/",
+      "summary": "Cholesterol is a fatty substance found in your blood. Too much of it can raise your risk of heart and circulation problems over time. A simple blood test from a GP or pharmacy tells you your numbers."
+    },
+    {
+      "id": "high-blood-pressure",
+      "title": "High blood pressure",
+      "url": "https://www.nhs.uk/conditions/high-blood-pressure-hypertension/",
+      "summary": "High blood pressure rarely has symptoms, so the only way to know if you have it is to get it checked. NHS pharmacies offer free walk-in checks to anyone aged 40 or over in England."
+    },
+    {
+      "id": "stop-smoking",
+      "title": "Stop smoking",
+      "url": "https://www.nhs.uk/live-well/quit-smoking/",
+      "summary": "Free support to stop smoking is available across the NHS, including local stop-smoking services, your GP, and pharmacies. Combining specialist support with stop-smoking aids gives you the best chance of quitting for good."
+    },
+    {
+      "id": "healthy-weight",
+      "title": "Healthy weight",
+      "url": "https://www.nhs.uk/live-well/healthy-weight/",
+      "summary": "Keeping to a healthy weight reduces your risk of heart disease and many other long-term conditions. The NHS has free tools for working out your BMI and small everyday changes that add up."
+    }
+  ]
+}

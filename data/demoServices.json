@@ -1,0 +1,31 @@
+{
+  "_meta": {
+    "demoPostcode": "M13 9PL",
+    "area": "Manchester (Ardwick / Hathersage Road, near Manchester Royal Infirmary)",
+    "compiledOn": "2026-06-06",
+    "note": "Hand-picked real-world Manchester GP practices and the local NHS hospital, because the NHS Service Search sandbox returns a 50-record canned demo dataset that contains zero Manchester records (see source-verification.md). This file is load-bearing for the demo.",
+    "policy": "Every row here must be verifiable on nhs.uk / the practice's own site at demo time. Pharmacies were intentionally NOT pre-baked because we couldn't verify the exact brand+address combos with high enough confidence; the renderer can still point users at 'a local pharmacy' for BP checks via the static officialContent card."
+  },
+  "services": [
+    {
+      "name": "Robert Darbishire Practice",
+      "type": "gp",
+      "address": "Walmer Street, Rusholme, Manchester M14 5NP"
+    },
+    {
+      "name": "Brunswick Health Centre",
+      "type": "gp",
+      "address": "Hartfield Close, Brunswick, Manchester M13 9YS"
+    },
+    {
+      "name": "Levenshulme Health Centre",
+      "type": "gp",
+      "address": "Dunstable Street, Levenshulme, Manchester M19 3BX"
+    },
+    {
+      "name": "Manchester Royal Infirmary",
+      "type": "hospital",
+      "address": "Oxford Road, Manchester M13 9WL"
+    }
+  ]
+}

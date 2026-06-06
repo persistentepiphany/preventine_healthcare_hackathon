@@ -1,0 +1,148 @@
+### Manual tests for the NHS context API.
+### Boot the server with:  npx tsx src/http/server.ts
+### Then send these from your editor's HTTP client (VS Code REST Client, JetBrains HTTP, etc).
+
+@base = http://localhost:3000
+
+### -- POSTCODE LOOKUP -----------------------------------------------------------
+
+### Valid postcode (Manchester — demo postcode)
+GET {{base}}/api/nhs/postcode?postcode=M13%209PL
+
+### Postcode without a space (gets normalised)
+GET {{base}}/api/nhs/postcode?postcode=m139pl
+
+### Invalid postcode → 404 (not_found)
+GET {{base}}/api/nhs/postcode?postcode=NOTAREALPOSTCODE
+
+### Missing postcode query param → 400
+GET {{base}}/api/nhs/postcode
+
+### -- FULL CONTEXT BUNDLE (the endpoint the UI calls) ---------------------------
+
+### Demo postcode — expect dataQuality.postcode=live, services=cached, content=cached.
+GET {{base}}/api/nhs/context?postcode=M13%209PL
+
+### Invalid postcode — orchestrator still returns content + services + waiting times,
+### with dataQuality.postcode=missing and an empty location.
+GET {{base}}/api/nhs/context?postcode=ZZ99%209ZZ
+
+### Blank postcode → 400
+GET {{base}}/api/nhs/context?postcode=
+
+### -- INDIVIDUAL FACETS ---------------------------------------------------------
+
+### Cached Manchester services (sandbox is unusable — see source-verification.md)
+GET {{base}}/api/nhs/services?postcode=M13%209PL
+
+### Area-level waiting-time signal (cached). isPersonalPrediction must be false.
+GET {{base}}/api/nhs/waiting-times
+
+### Synthetic population context (out-of-scope to wire live this turn).
+GET {{base}}/api/nhs/population
+
+### -- GP SUMMARY (engine + renderer) --------------------------------------------
+
+### Cached demo card for M13 9PL (no z.ai call). Use this on stage by default.
+POST {{base}}/api/nhs/gp-summary
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL"
+}
+
+### Live render — bypass cache.
+POST {{base}}/api/nhs/gp-summary?live=1
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL"
+}
+
+### Urgent-care override — chest pain. Must produce no services, no Health Check framing.
+POST {{base}}/api/nhs/gp-summary?live=1
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": true,
+    "systolicBp": 122,
+    "diastolicBp": 78,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": true,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL"
+}
+
+### Invalid patient → 400 with zod issues.
+POST {{base}}/api/nhs/gp-summary
+content-type: application/json
+
+{ "patient": { "age": "not a number" } }

@@ -1,0 +1,13 @@
+{
+  "_meta": {
+    "demoPostcode": "M13 9PL",
+    "area": "Manchester",
+    "compiledOn": "2026-06-06",
+    "isSynthetic": true,
+    "note": "Synthetic illustrative population context. NOT sourced from live Fingertips indicator data — that pull is out of scope for this turn. The renderer must surface dataQuality.population = 'cached' so judges see the honest picture."
+  },
+  "population": {
+    "area": "Manchester (Greater Manchester ICB)",
+    "notes": "Illustrative context for the renderer: Manchester is an urban authority with a younger-than-average population and pockets of higher health inequality. Specific numbers are not asserted by this file — the renderer is contractually barred from inventing percentages."
+  }
+}
