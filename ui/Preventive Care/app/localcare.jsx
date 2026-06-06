@@ -20,11 +20,20 @@ function travel(km) {
   };
 }
 
-/* likely-eligibility chip from NHS rules (deterministic) */
+/* likely-eligibility chip from NHS rules (deterministic).
+   GPs: registration matters, so the chip tells the user where they sit
+        relative to the practice's catchment.
+   Pharmacies: no registration, no catchment — walk-in.
+   Hospitals: never a walk-in route; referral only. */
 function eligChip(s) {
-  if (s.type === "gp_practice") return { label: "Health Check 40–74", tone: "ok" };
-  if (s.type === "pharmacy" && s.badge) return { label: "Free BP check 40+", tone: "ok" };
-  if (s.type === "hospital") return { label: "Referral only", tone: "muted" };
+  if (s.type === "gp_practice") {
+    if (s.catchmentStatus === "in") return { label: "In your catchment · register here", tone: "ok" };
+    if (s.catchmentStatus === "boundary") return { label: "Catchment boundary · registration possible", tone: "info" };
+    if (s.catchmentStatus === "out") return { label: "Out-of-area · ask the practice", tone: "warn" };
+    return { label: "Registration required", tone: "muted" };
+  }
+  if (s.type === "pharmacy") return { label: "Walk in · no registration", tone: "ok" };
+  if (s.type === "hospital") return { label: "GP referral only", tone: "muted" };
   return null;
 }
 
@@ -102,14 +111,36 @@ function LocalCare() {
     <div className="stage stage--airy">
       <div className="stage-head">
         <div>
-          <div className="stage-eyebrow">Step 3 · Local care</div>
-          <h1 className="stage-title">Where to go near you</h1>
+          <div className="stage-eyebrow">Step 3 · Navigating NHS care near you</div>
+          <h1 className="stage-title">How local NHS care works around {patient.postcode}</h1>
           <p className="stage-lede">
-            Services matched to what you need next — free blood-pressure checks, GP practices for a
-            Health Check, and hospitals only if you're later referred.
+            We don't book or refer for you — this page just shows the local services and explains
+            who you'd actually be eligible to use. NHS primary care works in three different ways
+            depending on the service.
           </p>
         </div>
       </div>
+
+      {/* Three-tier mental model — orientation for what each service type can and can't do. */}
+      <section className="lc-mental-model" aria-label="How local NHS care works">
+        <div className="lc-mm-card">
+          <div className="lc-mm-head"><span className="lc-mm-pin"><Icon name="pharmacy" size={14} stroke={1.9} /></span> Pharmacy</div>
+          <div className="lc-mm-rule">Walk in</div>
+          <div className="lc-mm-sub">Free BP check for anyone 40+ in England. No registration, no catchment — any participating pharmacy works.</div>
+        </div>
+        <div className="lc-mm-arrow"><Icon name="arrowRight" size={14} stroke={1.8} /></div>
+        <div className="lc-mm-card">
+          <div className="lc-mm-head"><span className="lc-mm-pin"><Icon name="stethoscope" size={14} stroke={1.9} /></span> GP practice</div>
+          <div className="lc-mm-rule">Register</div>
+          <div className="lc-mm-sub">You can only be seen at a GP you're registered with. Catchment matters — see the chip on each practice. Out-of-area registration is possible (see below).</div>
+        </div>
+        <div className="lc-mm-arrow"><Icon name="arrowRight" size={14} stroke={1.8} /></div>
+        <div className="lc-mm-card">
+          <div className="lc-mm-head"><span className="lc-mm-pin"><Icon name="hospital" size={14} stroke={1.9} /></span> Hospital</div>
+          <div className="lc-mm-rule">Referral only</div>
+          <div className="lc-mm-sub">No walk-in route for preventive care. Your GP refers you when needed — A&E is for emergencies, not routine checks.</div>
+        </div>
+      </section>
 
       <div className="filter-row">
         {[{ id: "all", label: "All" }, { id: "gp_practice", label: "GP Practices" }, { id: "pharmacy", label: "Pharmacies" }, { id: "hospital", label: "Hospitals" }].map((f) => (
@@ -217,6 +248,29 @@ function LocalCare() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Out-of-area registration — informed-choice card. Only relevant when GP
+          practices are in view, since it's a GP-specific NHS navigation detail. */}
+      {(filter === "all" || filter === "gp_practice") && (
+        <section className="lc-info-card">
+          <div className="lc-info-h">
+            <span className="lc-info-ico"><Icon name="info" size={15} stroke={1.9} /></span>
+            <h3 className="lc-info-title">Thinking about registering at a practice near work?</h3>
+          </div>
+          <p className="lc-info-body">
+            GP practices in England can accept out-of-area patients at their discretion — handy if you spend your weekdays in
+            central Manchester or another city. It's worth knowing the trade-off before you do:
+          </p>
+          <ul className="lc-info-list">
+            <li><span className="lc-info-bullet">·</span> You lose the right to <b>home visits</b> from that practice.</li>
+            <li><span className="lc-info-bullet">·</span> Out-of-hours / urgent care has to be routed through <b>NHS 111</b> from wherever you are at the time.</li>
+            <li><span className="lc-info-bullet">·</span> Only one practice is your registered home at a time.</li>
+          </ul>
+          <a className="lc-info-link" href="https://www.nhs.uk/nhs-services/gps/how-to-register-with-a-gp-surgery/" target="_blank" rel="noreferrer">
+            <Icon name="external" size={13} stroke={1.8} /> Read NHS guidance on registering with a GP
+          </a>
+        </section>
       )}
 
       {/* Waiting times — minimalist, informative */}

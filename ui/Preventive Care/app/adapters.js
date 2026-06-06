@@ -245,7 +245,11 @@
         case "cholesterol": return "Total cholesterol & HDL";
         case "smoking": return "Smoking status";
         case "bmi_or_waist": return "BMI or waist size";
-        default: return input.replace(/_/g, " ");
+        case "sex_at_birth": return "Sex at birth";
+        case "age": return "Age";
+        default:
+          var s = input.replace(/_/g, " ");
+          return s.charAt(0).toUpperCase() + s.slice(1);
       }
     };
     var missingHighValue = (qrisk.missingInputs || []).map(labelFor);
@@ -316,17 +320,104 @@
 
   // -- services --------------------------------------------------------
 
-  function adaptServices(context, fallback) {
-    // The backend's context.services has only {name, type, address}. The UI's
-    // service tiles need lat/lon/distance/phone/hours/offers etc. — the
-    // fallback already ships those for M13 9PL. Strategy:
-    //   - If we get context services and they match by name → enrich the
-    //     fallback (preserve UI metadata).
-    //   - Otherwise → fall back to the static M13 9PL service list verbatim,
-    //     which is consistent + demo-resilient. Show "Cached" badge.
+  // Regional swap: when a Demo seed lives outside Manchester, replace the
+  // hospital + GP entries with locally-appropriate ones. Pharmacies stay
+  // because their framing ("walk in anywhere, no catchment") is true
+  // nationally. UI metadata (whyHere, eligibility, offers, hours, etc.) is
+  // generic enough to reuse — we only swap name/address/lat/lon/phone/
+  // distance/catchment. Keep this table tight; only seeds we actually ship.
+  var REGIONAL_OVERRIDES = {
+    "Birmingham": {
+      gps: [
+        { name: "Hall Green Health", address: "979 Stratford Road, Birmingham B28 8AS", lat: 52.421, lon: -1.840, distanceKm: 1.4, phone: "0121 244 4000", catchmentStatus: "in" },
+        { name: "Yardley Wood Health Centre", address: "Mossfield Road, Birmingham B14 4AT", lat: 52.413, lon: -1.875, distanceKm: 0.6, phone: "0121 474 2200", catchmentStatus: "boundary" },
+      ],
+      hospitals: [
+        { name: "Queen Elizabeth Hospital Birmingham", address: "Mindelsohn Way, Edgbaston, Birmingham B15 2GW", lat: 52.452, lon: -1.943, distanceKm: 6.8, phone: "0121 627 2000" },
+        { name: "Heartlands Hospital", address: "Bordesley Green East, Birmingham B9 5SS", lat: 52.483, lon: -1.825, distanceKm: 5.9, phone: "0121 424 2000" },
+      ],
+    },
+    "Leeds": {
+      gps: [
+        { name: "Burley Park Medical Centre", address: "Cardigan Lane, Leeds LS4 2LE", lat: 53.812, lon: -1.575, distanceKm: 0.9, phone: "0113 295 1626", catchmentStatus: "in" },
+        { name: "Hyde Park Surgery", address: "Woodsley Road, Leeds LS6 1SG", lat: 53.815, lon: -1.564, distanceKm: 0.4, phone: "0113 295 1133", catchmentStatus: "in" },
+      ],
+      hospitals: [
+        { name: "Leeds General Infirmary", address: "Great George Street, Leeds LS1 3EX", lat: 53.802, lon: -1.553, distanceKm: 2.1, phone: "0113 243 2799" },
+        { name: "St James's University Hospital", address: "Beckett Street, Leeds LS9 7TF", lat: 53.808, lon: -1.521, distanceKm: 3.4, phone: "0113 243 3144" },
+      ],
+    },
+    "Bristol": {
+      gps: [
+        { name: "East Trees Health Centre", address: "Easton Road, Bristol BS5 0DZ", lat: 51.464, lon: -2.575, distanceKm: 3.0, phone: "0117 902 7100", catchmentStatus: "boundary" },
+        { name: "Bedminster Family Practice", address: "Regent Road, Bedminster, Bristol BS3 4AT", lat: 51.441, lon: -2.601, distanceKm: 0.6, phone: "0117 902 7180", catchmentStatus: "in" },
+      ],
+      hospitals: [
+        { name: "Bristol Royal Infirmary", address: "Marlborough Street, Bristol BS2 8HW", lat: 51.459, lon: -2.595, distanceKm: 2.4, phone: "0117 923 0000" },
+        { name: "Southmead Hospital", address: "Southmead Road, Westbury-on-Trym, Bristol BS10 5NB", lat: 51.498, lon: -2.595, distanceKm: 7.3, phone: "0117 950 5050" },
+      ],
+    },
+    "Newcastle upon Tyne": {
+      gps: [
+        { name: "Jesmond Health Partnership", address: "Osborne Avenue, Newcastle upon Tyne NE2 1JS", lat: 54.989, lon: -1.605, distanceKm: 0.4, phone: "0191 240 1234", catchmentStatus: "in" },
+        { name: "Saville Medical Group", address: "Ridley Place, Newcastle upon Tyne NE1 8JN", lat: 54.977, lon: -1.611, distanceKm: 0.9, phone: "0191 233 1421", catchmentStatus: "in" },
+      ],
+      hospitals: [
+        { name: "Royal Victoria Infirmary", address: "Queen Victoria Road, Newcastle upon Tyne NE1 4LP", lat: 54.980, lon: -1.617, distanceKm: 0.7, phone: "0191 233 6161" },
+        { name: "Freeman Hospital", address: "Freeman Road, High Heaton, Newcastle upon Tyne NE7 7DN", lat: 55.003, lon: -1.594, distanceKm: 3.3, phone: "0191 233 6161" },
+      ],
+    },
+    "Lambeth": {
+      gps: [
+        { name: "Streatham Hill Group Practice", address: "Sternhold Avenue, London SW2 4PA", lat: 51.443, lon: -0.130, distanceKm: 0.7, phone: "020 3049 3535", catchmentStatus: "in" },
+        { name: "Brixton Hill Group Practice", address: "Brixton Hill, London SW2 1RJ", lat: 51.456, lon: -0.122, distanceKm: 1.0, phone: "020 8674 7373", catchmentStatus: "in" },
+      ],
+      hospitals: [
+        { name: "King's College Hospital", address: "Denmark Hill, London SE5 9RS", lat: 51.469, lon: -0.094, distanceKm: 2.7, phone: "020 3299 9000" },
+        { name: "St Thomas' Hospital", address: "Westminster Bridge Road, London SE1 7EH", lat: 51.498, lon: -0.118, distanceKm: 5.4, phone: "020 7188 7188" },
+      ],
+    },
+    "Liverpool": {
+      gps: [
+        { name: "Princes Park Health Centre", address: "Bentley Road, Liverpool L8 0SY", lat: 53.394, lon: -2.969, distanceKm: 0.8, phone: "0151 295 8800", catchmentStatus: "in" },
+        { name: "Toxteth Annexe Medical Centre", address: "Park Road, Liverpool L8 6QP", lat: 53.391, lon: -2.972, distanceKm: 0.4, phone: "0151 295 9100", catchmentStatus: "in" },
+      ],
+      hospitals: [
+        { name: "Royal Liverpool University Hospital", address: "Mount Vernon Street, Liverpool L7 8YE", lat: 53.408, lon: -2.962, distanceKm: 2.2, phone: "0151 706 2000" },
+        { name: "Aintree University Hospital", address: "Longmoor Lane, Liverpool L9 7AL", lat: 53.476, lon: -2.949, distanceKm: 9.7, phone: "0151 525 5980" },
+      ],
+    },
+  };
+
+  function adaptServices(seed, context, fallback) {
+    // The backend's context.services only carries {name, type, address} —
+    // not enough to render tiles. We use the Manchester fallback as a
+    // template, then swap GP + hospital entries for region-appropriate ones
+    // when the seed lives elsewhere. Pharmacies stay because the framing
+    // ("walk in anywhere, no catchment") is true nationally.
     var fbServices = (fallback && fallback.services) || [];
-    if (!context || !context.services || !context.services.length) return fbServices;
-    return fbServices;
+    var locality = seed && seed.presentation && seed.presentation.location && seed.presentation.location.localAuthority;
+    if (!locality || !REGIONAL_OVERRIDES[locality]) return fbServices;
+
+    var overrides = REGIONAL_OVERRIDES[locality];
+    var hospitals = (overrides.hospitals || []).slice();
+    var gps = (overrides.gps || []).slice();
+
+    return fbServices.map(function (svc) {
+      if (svc.type === "hospital" && hospitals.length) {
+        var h = hospitals.shift();
+        // New id so React keys don't collide across regions.
+        return Object.assign({}, svc, h, { id: svc.id + "-" + slug(h.name) });
+      }
+      if (svc.type === "gp_practice" && gps.length) {
+        var g = gps.shift();
+        return Object.assign({}, svc, g, { id: svc.id + "-" + slug(g.name) });
+      }
+      return svc;
+    });
+  }
+  function slug(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   }
 
   // -- waitingTimes ----------------------------------------------------
@@ -510,7 +601,7 @@
       cvdRisk: adaptCvdRisk(seed, profile, fallback),
       profileChecklist: checklist.profileChecklist,
       completeness: checklist.completeness,
-      services: adaptServices(context, fallback),
+      services: adaptServices(seed, context, fallback),
       waitingTimes: adaptWaitingTimes(context, fallback),
       actions: adaptActions(seed, profile, fallback),
       gpQuestions: (fallback && fallback.gpQuestions) || [],

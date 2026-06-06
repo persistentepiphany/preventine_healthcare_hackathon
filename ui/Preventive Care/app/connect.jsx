@@ -185,6 +185,51 @@ function Connect({ app, go }) {
   const hasRecords = records.length > 0;
   const ageBand = patient.age ? patient.age + " yrs" : "—";
 
+  // Build the backend PatientInput from manual entries only. Anything the
+  // user did not enter stays undefined → the backend marks it "unknown" and
+  // the UI tile stays "Not recorded". This is the no-autofill contract.
+  function buildPatientInputFromManual() {
+    const base = window.PPApi.emptyPatientInput();
+    base.livesInEngland = true;
+    if (manual.age && manual.age.value) {
+      const n = parseInt(manual.age.value, 10);
+      if (isFinite(n) && n > 0 && n <= 120) base.age = n;
+    }
+    if (!base.age) base.age = 50; // safe default for the schema; user can always set it
+    if (manual.sex && manual.sex.value) base.sexAtBirth = manual.sex.value;
+    if (manual.bp && manual.bp.value) {
+      const m = /^\s*(\d{2,3})\s*\/\s*(\d{2,3})\s*$/.exec(manual.bp.value);
+      if (m) { base.systolicBp = +m[1]; base.diastolicBp = +m[2]; base.bpCheckedLast6Months = true; }
+    }
+    if (manual.cholesterol && manual.cholesterol.value) {
+      const n = parseFloat(manual.cholesterol.value);
+      if (isFinite(n)) base.totalCholesterol = n;
+    }
+    if (manual.hdl && manual.hdl.value) {
+      const n = parseFloat(manual.hdl.value);
+      if (isFinite(n)) base.hdlCholesterol = n;
+    }
+    if (manual.bmi && manual.bmi.value) {
+      const n = parseFloat(manual.bmi.value);
+      if (isFinite(n)) base.bmi = n;
+    }
+    if (manual.waist && manual.waist.value) {
+      const n = parseFloat(manual.waist.value);
+      if (isFinite(n)) base.waistCircumferenceCm = n;
+    }
+    if (manual.smoking && manual.smoking.value) base.smokingStatus = manual.smoking.value;
+    return base;
+  }
+
+  function onGenerate() {
+    if (app.mode === "live") {
+      const pi = buildPatientInputFromManual();
+      app.submitLive(pi, postcode);
+    } else {
+      go("report");
+    }
+  }
+
   return (
     <div className="stage">
       <div className="stage-head">
@@ -198,8 +243,10 @@ function Connect({ app, go }) {
           </p>
         </div>
         {hasData && (
-          <button className="cta" onClick={() => go("report")}>
-            Generate report <Icon name="arrowRight" size={16} stroke={2} />
+          <button className="cta" onClick={onGenerate} disabled={app.apiState === "loading"}>
+            {app.apiState === "loading"
+              ? <>Building report…</>
+              : <>Generate report <Icon name="arrowRight" size={16} stroke={2} /></>}
           </button>
         )}
       </div>
@@ -403,16 +450,24 @@ function Connect({ app, go }) {
 
 /* ---- Inline manual-entry form ---- */
 function ManualEntryForm({ patient, initial, onSave, onCancel, onClear }) {
+  const [age, setAge] = useState((initial.age && initial.age.value) || "");
+  const [sex, setSex] = useState((initial.sex && initial.sex.value) || "");
+  const [smoking, setSmoking] = useState((initial.smoking && initial.smoking.value) || "");
   const [bp, setBp] = useState((initial.bp && initial.bp.value) || "");
   const [cholesterol, setCholesterol] = useState((initial.cholesterol && initial.cholesterol.value) || "");
+  const [hdl, setHdl] = useState((initial.hdl && initial.hdl.value) || "");
   const [bmi, setBmi] = useState((initial.bmi && initial.bmi.value) || "");
   const [waist, setWaist] = useState((initial.waist && initial.waist.value) || "");
 
   function submit(e) {
     if (e && e.preventDefault) e.preventDefault();
     onSave({
+      age: age.trim(),
+      sex: sex,
+      smoking: smoking,
       bp: bp.trim(),
       cholesterol: cholesterol.trim(),
+      hdl: hdl.trim(),
       bmi: bmi.trim(),
       waist: waist.trim(),
     });
@@ -426,6 +481,20 @@ function ManualEntryForm({ patient, initial, onSave, onCancel, onClear }) {
       </div>
       <div className="manual-grid">
         <label className="manual-field">
+          <span className="manual-field-label">Age (years)</span>
+          <input value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 52" inputMode="numeric" maxLength={3} />
+        </label>
+        <label className="manual-field">
+          <span className="manual-field-label">Sex at birth</span>
+          <select value={sex} onChange={(e) => setSex(e.target.value)}>
+            <option value="">—</option>
+            <option value="female">Female</option>
+            <option value="male">Male</option>
+            <option value="intersex">Intersex</option>
+            <option value="prefer_not_to_say">Prefer not to say</option>
+          </select>
+        </label>
+        <label className="manual-field">
           <span className="manual-field-label">Blood pressure (mmHg)</span>
           <input value={bp} onChange={(e) => setBp(e.target.value)} placeholder="e.g. 128/82" />
         </label>
@@ -434,14 +503,28 @@ function ManualEntryForm({ patient, initial, onSave, onCancel, onClear }) {
           <input value={cholesterol} onChange={(e) => setCholesterol(e.target.value)} placeholder="e.g. 5.4" />
         </label>
         <label className="manual-field">
+          <span className="manual-field-label">HDL cholesterol (mmol/L)</span>
+          <input value={hdl} onChange={(e) => setHdl(e.target.value)} placeholder="e.g. 1.2" />
+        </label>
+        <label className="manual-field">
           <span className="manual-field-label">BMI (kg/m²)</span>
           <input value={bmi} onChange={(e) => setBmi(e.target.value)} placeholder="e.g. 27.8" />
         </label>
         <label className="manual-field">
           <span className="manual-field-label">Waist (cm)</span>
-          <input value={waist} onChange={(e) => setWaist(e.target.value)} placeholder={patient.sex === "Female" ? "e.g. 78" : "e.g. 96"} />
+          <input value={waist} onChange={(e) => setWaist(e.target.value)} placeholder={patient.sex === "Female" || sex === "female" ? "e.g. 78" : "e.g. 96"} />
+        </label>
+        <label className="manual-field">
+          <span className="manual-field-label">Smoking</span>
+          <select value={smoking} onChange={(e) => setSmoking(e.target.value)}>
+            <option value="">—</option>
+            <option value="never">Never smoked</option>
+            <option value="former">Former smoker</option>
+            <option value="current">Current smoker</option>
+          </select>
         </label>
       </div>
+      <p className="manual-foot-note">Only fields you fill in get sent to the engine — empty fields stay "Not recorded".</p>
       <div className="manual-actions">
         {onClear && <button type="button" className="manual-cancel" onClick={onClear}>Clear saved</button>}
         <button type="button" className="manual-cancel" onClick={onCancel}>Cancel</button>

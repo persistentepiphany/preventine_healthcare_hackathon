@@ -46,8 +46,14 @@ function MetricDetail({ m, det, onAdd, onLocal }) {
 function Report({ app, go }) {
   const D = window.APP_DATA;
   const { patient, measurements, measurementDetail, healthCheck, cvdRisk, completeness, actions, gpQuestions, gpSummary, trends } = D;
+  const isDefaultMode = !app || app.mode === "default";
+  const isLiveMode = app && app.mode === "live";
+  // In Default mode the CVD ring starts locked so the click-to-unlock demo
+  // can showcase the change. In Demo/Live, the ring reflects the backend's
+  // real QRISK3 readiness — no synthetic unlock.
+  const backendReady = !isDefaultMode && cvdRisk && cvdRisk.state === "ready";
   const [copied, setCopied] = useState(false);
-  const [unlocked, setUnlocked] = useState(false);
+  const [unlocked, setUnlocked] = useState(backendReady);
   const [regen, setRegen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [openMetric, setOpenMetric] = useState(null);
@@ -65,7 +71,7 @@ function Report({ app, go }) {
 
   const reportSteps = [
     { text: "Loading your measurements", result: "6 signals", tone: "ok" },
-    { text: "Matching " + patient.postcode + " to NHS area", result: patient.location.icb.replace("NHS ", ""), tone: "ok" },
+    { text: "Matching " + patient.postcode + " to NHS area", result: (patient.location && patient.location.icb || "NHS").replace("NHS ", ""), tone: "ok" },
     { text: "Checking NHS Health Check rules", result: "Likely eligible", tone: "ok" },
     { text: "Scanning for missing inputs", result: "BP + cholesterol", tone: "warn" },
     { text: "Assembling prevention factors", result: "7 factors", tone: "ok" },
@@ -73,6 +79,27 @@ function Report({ app, go }) {
   ];
 
   if (!reportReady) {
+    // Live mode: no fake animation. Direct the user back to Connect, where
+    // "Generate report" actually runs the engine against their inputs.
+    if (isLiveMode) {
+      return (
+        <div className="stage">
+          <div className="stage-head">
+            <div>
+              <div className="stage-eyebrow">Step 2 · Report</div>
+              <h1 className="stage-title">No report yet</h1>
+              <p className="stage-lede">Add measurements in Connect, then click <strong>Generate report</strong> to run your data through the prevention engine.</p>
+            </div>
+          </div>
+          <section className="panel" style={{ textAlign: "center", padding: "48px 28px" }}>
+            <span className="empty-ico"><Icon name="info" size={26} stroke={1.6} /></span>
+            <div className="empty-title" style={{ marginTop: 14 }}>Your report is built from what you enter</div>
+            <div className="empty-sub" style={{ margin: "8px 0 22px" }}>Only the measurements you add will appear — nothing is autofilled.</div>
+            <button className="cta" onClick={() => go("connect")}>Back to Connect <Icon name="arrowRight" size={14} stroke={2} /></button>
+          </section>
+        </div>
+      );
+    }
     return (
       <div className="stage">
         <div className="stage-head">
@@ -94,29 +121,59 @@ function Report({ app, go }) {
     );
   }
 
-  // Derived: when the two missing checks are added (demo), measurements + readiness change.
+  // Synthetic unlock applies only in Default mode (the showcase click-to-fill).
+  // In Demo/Live, the measurements already reflect the real backend response.
+  const applySyntheticUnlock = isDefaultMode && unlocked;
+
   const shownMeasurements = measurements.map((m) => {
-    if (unlocked && (m.id === "bp" || m.id === "cholesterol")) {
+    if (applySyntheticUnlock && (m.id === "bp" || m.id === "cholesterol") && m.unlockValue) {
       return { ...m, value: m.unlockValue, status: m.unlockStatus, statusLabel: m.unlockStatusLabel, note: m.unlockNote, justAdded: true };
     }
     return m;
   });
-  const segments = [
-    { label: "Blood pressure", done: unlocked },
-    { label: "Cholesterol / HDL", done: unlocked },
-    { label: "Body measurements", done: true },
-    { label: "Smoking & lifestyle", done: true },
-    { label: "Family & history", done: true },
-  ];
+
+  // Segments: use the live profileChecklist when present so the readiness
+  // ring tracks the real patient. In Default+unlocked, mark BP/cholesterol
+  // done so the showcase reads "100% ready".
+  const baseSegments = (Array.isArray(D.profileChecklist) && D.profileChecklist.length)
+    ? D.profileChecklist.map((c) => ({ label: c.label, done: !!c.done }))
+    : [
+        { label: "Blood pressure", done: unlocked },
+        { label: "Cholesterol / HDL", done: unlocked },
+        { label: "Body measurements", done: true },
+        { label: "Smoking & lifestyle", done: true },
+        { label: "Family & history", done: true },
+      ];
+  const segments = applySyntheticUnlock
+    ? baseSegments.map((c) => /blood pressure|cholesterol/i.test(c.label) ? { ...c, done: true } : c)
+    : baseSegments;
   const doneCount = segments.filter((s) => s.done).length;
   const pct = Math.round((doneCount / segments.length) * 100);
-  const factorMix = unlocked
+
+  // Factor mix from the backend's readiness counts when available. Falls back
+  // to the showcase mix for Default+unlocked.
+  const readiness = D._backend && D._backend.readiness;
+  const factorMix = applySyntheticUnlock
     ? [
         { label: "Recorded risk factors", value: 7, tone: "raised" },
         { label: "Protective / normal", value: 2, tone: "good" },
         { label: "Still unknown", value: 0, tone: "info" },
       ]
-    : trends.factorMix;
+    : readiness
+      ? [
+          { label: "Recorded risk factors", value: readiness.recorded || 0, tone: "raised" },
+          { label: "Protective / normal", value: readiness.protective || 0, tone: "good" },
+          { label: "Still unknown", value: readiness.unknown || 0, tone: "info" },
+        ]
+      : trends.factorMix;
+
+  // Missing-measurement list for the locked panel. In Default we still
+  // present a canned "BP + cholesterol" CTA; in Demo/Live we show the
+  // backend's real cvdRisk.missingHighValue.
+  const missingList = Array.isArray(cvdRisk.missingHighValue) && cvdRisk.missingHighValue.length
+    ? cvdRisk.missingHighValue
+    : ["Blood pressure", "Total cholesterol & HDL"];
+  const missingLabel = missingList.join(" + ").toLowerCase();
 
   function copy() {
     const done = () => { setCopied(true); setTimeout(() => setCopied(false), 2200); };
@@ -187,17 +244,35 @@ function Report({ app, go }) {
             <div className="unlock-box">
               <div className="unlock-head">
                 <Icon name="unlock" size={16} stroke={1.8} />
-                <span>You're <b>2 measurements</b> from a real estimate. Adding them unlocks:</span>
+                <span>
+                  You're <b>{missingList.length} measurement{missingList.length === 1 ? "" : "s"}</b> from a real estimate. Adding {missingList.length === 1 ? "it" : "them"} unlocks:
+                </span>
               </div>
               <ul className="unlock-list">
                 {cvdRisk.unlocks.map((u) => (<li key={u}><Icon name="arrowRight" size={12} stroke={2.2} /> {u}</li>))}
               </ul>
-              <div className="unlock-actions">
-                <button className="cta" onClick={addMissing} disabled={adding}>
-                  {adding ? <><span className="btn-spin" /> Adding…</> : <><Icon name="plus" size={15} stroke={2.2} /> Add blood pressure + cholesterol</>}
-                </button>
-                <span className="unlock-note">Demo — simulates linking the two missing results</span>
-              </div>
+              {isDefaultMode ? (
+                <div className="unlock-actions">
+                  <button className="cta" onClick={addMissing} disabled={adding}>
+                    {adding ? <><span className="btn-spin" /> Adding…</> : <><Icon name="plus" size={15} stroke={2.2} /> Add {missingLabel}</>}
+                  </button>
+                  <span className="unlock-note">Demo — simulates linking the missing results</span>
+                </div>
+              ) : (
+                <div className="unlock-actions">
+                  <div className="unlock-missing">
+                    <span className="unlock-missing-label">Missing:</span>
+                    {missingList.map((m) => (
+                      <span key={m} className="missing-pill"><span className="chip-dot" style={{ background: "var(--attn)" }} /> {m}</span>
+                    ))}
+                  </div>
+                  <span className="unlock-note">
+                    {isLiveMode
+                      ? "Add the missing measurements in Connect and click Generate report again."
+                      : "QRISK3 readiness reflects this random patient's recorded measurements."}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="unlock-box unlock-box--ok">
@@ -207,7 +282,7 @@ function Report({ app, go }) {
               </div>
               <div className="unlock-actions">
                 <button className="cta" onClick={() => go("local")}>Find a clinician to run it <Icon name="arrowRight" size={15} stroke={2} /></button>
-                <button className="link-btn" onClick={() => setUnlocked(false)}>Reset demo</button>
+                {isDefaultMode && <button className="link-btn" onClick={() => setUnlocked(false)}>Reset demo</button>}
               </div>
             </div>
           )}
