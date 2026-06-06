@@ -1,171 +1,88 @@
-# PreventPath — Orbit Submission
+# PreventPath Orbit Submission
 
 ## Overview
 
-**PreventPath** is an NHS prevention navigator for England. It helps users understand what preventive health information may be missing, see possible NHS service routes, and prepare a copyable summary for a conversation with their registered GP practice, a participating community pharmacy, or another appropriate NHS service.
+PreventPath is an NHS prevention navigator for England. It helps users understand what preventive health information may be missing, see possible NHS service routes, and prepare a copyable conversation summary.
 
-**Event**: VibeHack London 2026
-**Award**: Z.ai x Orbit Builder Workflow Award
-**Date Built**: June 6, 2026
-
----
-
-## Live Links
-
-- **Demo URL**: [To be added — please insert deployed URL]
-- **GitHub Repo**: [To be added — please insert repo URL]
-- **Devpost Page**: [To be added — please insert Devpost URL]
-- **Manus Share**: [To be added — please insert Manus link]
+**Event**: VibeHack London 2026  
+**Award**: Z.ai x Orbit Builder Workflow Award  
+**Date**: June 6, 2026
 
 ---
 
-## Workflow Summary
+## What the Project Does
 
-### Phase 1: Rules Engine Architecture (Pre-Session)
+PreventPath guides users through routine prevention questions, identifies possible missing information, separates urgent safety concerns from routine prevention, and suggests possible next routes such as:
 
-**Branch**: `rules-engine-safety`
+- Contacting your registered GP practice
+- Checking GP registration status
+- Asking about participating community pharmacy services
+- Checking screening invitation status
+- Understanding NHS Health Check eligibility
 
-Built a type-safe, deterministic rules engine with safety guardrails at every step. No LLM calls, no NHS API integration, no risk score calculations.
-
-**Key Files Created**:
-- `src/lib/rules/index.ts` — Main exports
-- `src/lib/rules/types.ts` — TypeScript contracts (500+ lines)
-- `src/lib/rules/constants.ts` — Safety constants
-- `src/lib/rules/safetyRules.ts` — Emergency/urgent red flag detection
-- `src/lib/rules/missingMeasurements.ts` — Preventive-care gap detection
-- `src/lib/rules/healthCheckEligibility.ts` — NHS Health Check logic
-- `src/lib/rules/screeningEligibility.ts` — Population screening routes
-- `src/lib/rules/qriskReadiness.ts` — Educational QRISK readiness (no score)
-- `src/lib/rules/recommendations.ts` — Recommendation cards
-- `src/lib/rules/gpSummary.ts` — Copyable GP text builder
-- `src/lib/rules/assessPreventiveRoute.ts` — Main orchestrator
-- `src/lib/rules/validation.ts` — Input validation
-- `src/lib/rules/demoCases.ts` — Test cases
-- `src/lib/rules/finalReviewTest.ts` — Integration tests
-- `src/lib/rules/testDefensive.ts` — Defensive tests
-
-### Phase 2: Frontend Landing Page (Pre-Session)
-
-**Branch**: `feature/landing-page`
-
-Built a patient-facing landing page with careful attention to NHS-safe language and visual hierarchy.
-
-**Components Created** (24 components total):
-
-**Core Layout**:
-- `src/app/layout.tsx` — App layout with fonts
-- `src/app/page.tsx` — Main landing page assembly
-- `src/app/globals.css` — Tailwind + custom styling
-
-**Navigation & Branding**:
-- `LandingNavbar.tsx` — Healthcare-friendly navbar with NHS logo
-- `LandingFooter.tsx` — Footer with legal and safety notices
-
-**Hero Section**:
-- `HeroSection.tsx` — Main value proposition with SVG journey diagram
-
-**Educational Sections**:
-- `CareJourneyDiagram.tsx` — Visual process flow
-- `PreventionRouteDiagram.tsx` — NHS service routes visualization
-- `SafetyFirstPanel.tsx` — Urgent vs routine prevention distinction
-- `SafetyTrustStrip.tsx` — Trust indicators
-- `SafetyGateDiagram.tsx` — Safety layer visualization
-- `WhatItDoesNotDo.tsx` — Boundary education
-- `WhatWeDoNotDoStrip.tsx` — Compact boundary strip
-- `TechAndRulesSection.tsx` — Technical safety explanation
-- `RulesEngineFlow.tsx` — Rules engine diagram
-- `ServiceRouteMap.tsx` — Service navigation map
-
-**Interactive Elements**:
-- `MissingInformationCards.tsx` — Data gap cards
-- `PossibleRoutesSection.tsx` — NHS route options
-- `CopyableSummaryPreview.tsx` — Conversation starter preview
-- `NhsConversationPreview.tsx` — GP conversation template
-- `FinalCTASection.tsx` — Call to action
-- `QriskReadinessLock.tsx` — QRISK educational gate
-- `MissingMeasurementsGrid.tsx` — Measurement grid
-
-**UI Components** (Aceternity UI integration):
-- `ui/bento-grid.tsx`
-- `ui/magic-card.tsx`
-- `ui/matte-panel.tsx`
-- `ui/shimmer-button.tsx`
-
-### Phase 3: Orbit Capture (Session)
-
-Created workflow documentation and submission package for the Z.ai x Orbit Builder Workflow Award.
+The platform uses cautious language throughout — "may," "possible," "consider asking," "conversation starter" — to avoid diagnostic framing while still being useful for patient preparation.
 
 ---
 
-## Prompts Used
+## What the Project Does Not Do
 
-### Landing Page Development
-*(Summarized from git commit history)*
+PreventPath does not:
 
-1. **Hero Section Rewrite**
-   > "Rewrite hero section with patient-facing copy"
+- Diagnose medical conditions
+- Prescribe treatments or medications
+- Confirm eligibility for NHS services
+- Book appointments
+- Calculate clinical risk scores for users
+- Replace NHS advice
 
-2. **Safety Language**
-   > "Add NHS cyan color to design tokens"
-   > "Add What It Does Not Do component"
-
-3. **Information Architecture**
-   > "Add information cards and possible routes sections"
-   > "Add conversation preview and what-not-to-do components"
-
-4. **UI Integration**
-   > "Integrate Aceternity UI components"
-   > "Add NHS logo to navbar"
-
-5. **Structural Refactors**
-   > "Restructure landing page for patient experience"
-   > "Update final CTA and footer"
-
-### Rules Engine Development
-*(From early commit history)*
-
-1. **Core Engine**
-   > "Add modular TypeScript rules engine for PreventPath"
-
-2. **Safety Layer**
-   > "Add safety constants for rules engine"
-   > "Refactor safetyRules.ts for urgency assessment"
-
-3. **Preventive Care Logic**
-   > "Add findMissingMeasurements for preventive-care gap detection"
-   > "Implement assessHealthCheckEligibility for NHS Health Check"
-   > "Implement assessScreeningEligibility for screening route hints"
-
-4. **Defensive Programming**
-   > "Add defensive input handling to rules engine"
+All clinical decisions remain with NHS healthcare professionals. PreventPath is a preparation and navigation tool, not a diagnostic or triage service.
 
 ---
 
-## Key Design Decisions
+## How AI Supported the Workflow
 
-| Decision | Context | Rationale |
-|----------|---------|-----------|
-| **Cautious Language Only** | All user-facing copy | Never state "you are eligible", "you need", "you have risk", or make diagnoses. Use "may", "possible", "consider asking" |
-| **Safety Gate First** | Rules engine architecture | Safety/urgency assessment runs BEFORE all routine prevention logic. Red flags = immediate routing advice |
-| **No QRISK Calculation** | QRISK readiness module | Only assess if sufficient data exists for QRISK. Never calculate or display risk score |
-| **"Registered GP Practice"** | All GP route references | Avoids suggesting users can access any GP. Must use their registered practice |
-| **Separate Urgent Care** | Information architecture | Keep urgent/acute symptoms distinctly separate from routine prevention routes |
-| **Deterministic Logic Only** | Rules engine choice | No LLM calls, no fuzzy matching. Pure TypeScript functions for reproducible outputs |
-| **Local Processing** | Privacy architecture | No data leaves user's device during assessment |
-| **NHS Cyan (#005EB8)** | Primary color | Aligns with NHS brand identity for trust and recognition |
-| **Dark Mode Base** | Design system | Linear-inspired dark theme (#0A0E14) with high contrast for accessibility |
-| **Component Library** | UI choice | Aceternity UI + custom components for polished, modern feel without heavy dependencies |
-| **Type Safety** | TypeScript strategy | Full type coverage with strict types for all rules engine inputs/outputs |
+AI supported the PreventPath build across multiple areas, **but the clinical-facing logic remained rule-based**:
+
+| Area | AI Support |
+|------|------------|
+| **Research** | NHS prevention pathways, screening schedules, service routing |
+| **Product framing** | Safety boundaries, cautious language patterns |
+| **Safe wording review** | Checking copy against NHS-aligned constraints |
+| **Interface iteration** | Landing page components, visual diagrams |
+| **Landing-page direction** | Patient-first information architecture |
+| **Rule-engine planning** | TypeScript module structure, safety guardrails |
+| **Workflow capture** | Documenting the build process for Orbit submission |
+
+**Clinical logic is deterministic** — pure TypeScript rules with no LLM inference for patient-facing decisions. Urgency assessment, missing measurements, and eligibility checks all run through deterministic functions with defined inputs and outputs.
 
 ---
 
-## Technical Architecture
+## Key Links
+
+| Link | URL |
+|------|-----|
+| **Live Demo (Video)** | https://youtu.be/_jwiqHJrHTY |
+| **GitHub Repository** | https://github.com/persistentepiphany/preventine_healthcare_hackathon |
+| **Devpost Page** | https://devpost.com/software/preventpath |
+| **Manus Share** | https://manus.im/share/UM6x39r0LkmulzzDmYN8O3 |
+
+---
+
+## Team
+
+- Istiaq
+- Hein
+- Max
+
+---
+
+## Project Structure
 
 ```
 PreventPath/
 ├── src/lib/rules/              # Rules Engine (TypeScript)
 │   ├── index.ts                # Main exports
-│   ├── types.ts                # 500+ lines of type contracts
+│   ├── types.ts                # TypeScript contracts
 │   ├── safetyRules.ts          # Emergency/urgent detection
 │   ├── constants.ts            # Safety constants
 │   ├── missingMeasurements.ts  # Gap detection
@@ -176,17 +93,14 @@ PreventPath/
 │   ├── gpSummary.ts            # Copyable text builder
 │   ├── assessPreventiveRoute.ts
 │   ├── validation.ts
-│   ├── demoCases.ts
-│   ├── finalReviewTest.ts
-│   └── testDefensive.ts
+│   └── test files...
 │
 └── frontend/
     ├── src/
     │   ├── app/
     │   │   ├── layout.tsx
     │   │   ├── page.tsx
-    │   │   ├── globals.css
-    │   │   └── fonts/
+    │   │   └── globals.css
     │   ├── components/         # 24 components
     │   │   ├── LandingNavbar.tsx
     │   │   ├── LandingFooter.tsx
@@ -197,69 +111,70 @@ PreventPath/
     │   │   ├── MissingInformationCards.tsx
     │   │   ├── PossibleRoutesSection.tsx
     │   │   ├── NhsConversationPreview.tsx
-    │   │   ├── FinalCTASection.tsx
-    │   │   ├── CopyableSummaryPreview.tsx
-    │   │   ├── TechAndRulesSection.tsx
-    │   │   ├── RulesEngineFlow.tsx
-    │   │   ├── SafetyGateDiagram.tsx
-    │   │   ├── ServiceRouteMap.tsx
-    │   │   ├── QriskReadinessLock.tsx
-    │   │   ├── MissingMeasurementsGrid.tsx
-    │   │   ├── PreventionRouteDiagram.tsx
-    │   │   ├── SafetyTrustStrip.tsx
-    │   │   └── ui/
-    │   │       ├── bento-grid.tsx
-    │   │       ├── magic-card.tsx
-    │   │       ├── matte-panel.tsx
-    │   │       └── shimmer-button.tsx
+    │   │   └── ... (plus UI components)
     │   └── lib/
     │       ├── constants.ts    # Design tokens
     │       └── copy.ts         # NHS-safe copy
-    ├── package.json
-    ├── tsconfig.json
-    ├── tailwind.config.ts
-    └── next.config.mjs
 ```
-
----
-
-## Constraints Adhered To
-
-✅ No diagnosis, prescribing, or treatment advice
-✅ No eligibility confirmation (only "possibly eligible")
-✅ No clinical risk calculations
-✅ No appointment booking
-✅ No NHS advice replacement
-✅ Cautious wording: "may", "possible", "consider asking", "conversation starter"
-✅ "Your registered GP practice" (not "any GP")
-✅ Urgent care separated from routine prevention routes
-✅ `src/lib/rules` not modified without explicit request
 
 ---
 
 ## Screenshots
 
-*[Note: Screenshots should be added here. Include:]*
-- Hero section
-- Safety first panel
-- Missing information cards
-- Possible routes section
-- Conversation preview
-- Mobile responsive views
+See `screenshots/final/` for 6 screenshots from the demo video:
+
+1. **Opening Dashboard** — Initial landing view
+2. **Prevention Inputs** — Data entry interface
+3. **Prevention Report** — Results display
+4. **QRisk Readiness and Vitals** — Educational readiness gate
+5. **Possible Local Routes** — NHS service navigation
+6. **Route Detail and Summary** — Copyable conversation starter
 
 ---
 
-## Team
+## Safety Framework
 
-**Event**: VibeHack London 2026
-**Lens**: Z.ai x Orbit
+### Language Constraints
+
+All user-facing copy adheres to:
+- "may" instead of "you are eligible"
+- "possible" instead of "you need"
+- "consider asking" instead of action directives
+- "conversation starter" rather than "plan"
+
+### Safety Gates
+
+1. **Urgency First**: Emergency/urgent red-flag assessment runs BEFORE routine prevention logic
+2. **Registered GP**: All GP routes specify "your registered GP practice," not any GP
+3. **Separate Urgent Care**: Acute symptoms distinctly separated from routine prevention
+4. **No Risk Scores**: QRISK readiness is educational only — no score calculation or display
+
+### Technical Safeguards
+
+- Deterministic rules engine (no LLM inference on clinical decisions)
+- Type-safe TypeScript throughout
+- Defensive input handling with validation
+- Local processing (no data leaves user device)
 
 ---
 
-## License
+## Technical Architecture
 
-[NHS Source Code License — see LICENSE file in repository]
+**Frontend**: Next.js 14 + TypeScript + Tailwind CSS  
+**UI Library**: Aceternity UI + Lucide React  
+**Rules Engine**: Pure TypeScript (14 modules)  
+**Design System**: NHS cyan (#005EB8) + Linear-inspired dark theme
 
 ---
 
-*Submission prepared with Orbie — Orbit's on-site companion for VibeHack London 2026*
+## Supporting Documents
+
+- `workflow-summary.md` — How AI agents supported the build
+- `prompts-used.md` — Key prompts and agent tasks
+- `design-decisions.md` — Main product and safety decisions
+- `links.md` — Complete link list and team details
+
+---
+
+*Submission prepared for Z.ai x Orbit Builder Workflow Award*  
+*VibeHack London 2026*
