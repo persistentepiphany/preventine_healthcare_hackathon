@@ -1,176 +1,108 @@
 /**
  * QRISK assessment readiness rules
  *
- * Determines whether patient has sufficient data for QRISK calculation.
- * QRISK requires: age, sex, blood pressure, cholesterol, smoking status,
- * ethnicity, postcode (for deprivation index), and relevant comorbidities.
+ * Determines whether patient has sufficient data for an educational
+ * cardiovascular risk estimate. This does NOT calculate QRISK.
  *
- * Note: This module only checks data completeness. Actual QRISK calculation
- * is done separately using the validated data.
+ * The prototype provides readiness information only. No clinical risk
+ * scoring is performed here.
  */
 
-import type {
-  RulesEngineInput,
-  EligibilityResult,
-} from './types';
-import { AGE_THRESHOLDS, PREREQUISITES, DATA_FRESHNESS } from './constants';
+import type { PatientInput, QriskReadiness } from './types';
+
+const DISCLAIMER = [
+  'This is a prototype for educational purposes only.',
+  'No clinical risk score is calculated.',
+  'This does not provide clinical decision support.',
+  'Any future estimate would be informational only.',
+];
 
 /**
- * Calculate months since a given date
+ * Assess QRISK readiness from patient input
+ *
+ * Checks if sufficient data exists for an educational cardiovascular
+ * risk estimate. Does not perform any risk calculation.
  */
-function monthsSince(dateString: string): number {
-  const date = new Date(dateString);
-  const now = new Date();
-  const months = (now.getFullYear() - date.getFullYear()) * 12 +
-    (now.getMonth() - date.getMonth());
-  return months;
-}
+export function assessQriskReadiness(input: PatientInput): QriskReadiness {
+  const missingData: string[] = [];
+  const staleData: string[] = [];
 
-/**
- * Get latest date from blood pressure history
- */
-function getLatestBloodPressureDate(input: RulesEngineInput): Date | null {
-  if (!input.bloodPressureHistory || input.bloodPressureHistory.length === 0) return null;
-  return input.bloodPressureHistory.reduce((latest, reading) => {
-    const readingDate = new Date(reading.dateRecorded);
-    return readingDate > latest ? readingDate : latest;
-  }, new Date(0));
-}
-
-/**
- * Get latest date from cholesterol history
- */
-function getLatestCholesterolDate(input: RulesEngineInput): Date | null {
-  const cholesterolTests = input.bloodTestHistory?.filter(b => b.type === 'cholesterol');
-  if (!cholesterolTests || cholesterolTests.length === 0) return null;
-  return cholesterolTests.reduce((latest, test) => {
-    const testDate = new Date(test.dateRecorded);
-    return testDate > latest ? testDate : latest;
-  }, new Date(0));
-}
-
-/**
- * Evaluate QRISK assessment readiness
- */
-export function evaluateQRiskReadiness(input: RulesEngineInput): EligibilityResult {
-  const { demographics, riskFactors } = input;
-  const age = demographics.age;
-  const sex = demographics.sex;
-
-  const prerequisites: string[] = PREREQUISITES.qrisk;
-  const blockedBy: string[] = [];
-
-  // Check age eligibility
-  if (age < AGE_THRESHOLDS.QRISK.MIN) {
+  // 1. If existing CVD reported, primary prevention-style estimates are not appropriate
+  if (input.hasCvd === true) {
     return {
-      screeningType: 'qrisk',
-      status: 'not_eligible',
-      reason: `Below minimum age for QRISK assessment (${AGE_THRESHOLDS.QRISK.MIN})`,
-      urgency: 'none',
-      prerequisites,
-      blockedBy,
+      ready: false,
+      missingData: [],
+      staleData: [],
+      status: 'not_calculated',
+      explanation: buildExplanation('not_calculated', missingData),
     };
   }
 
-  if (age > AGE_THRESHOLDS.QRISK.MAX) {
-    return {
-      screeningType: 'qrisk',
-      status: 'not_eligible',
-      reason: `Above maximum age for QRISK assessment (${AGE_THRESHOLDS.QRISK.MAX})`,
-      urgency: 'none',
-      prerequisites,
-      blockedBy,
-    };
-  }
-
-  // Check sex (QRISK validated for both male and female)
-  if (!['male', 'female'].includes(sex)) {
-    blockedBy.push('Sex must be specified as male or female');
-  }
-
-  // Check blood pressure data
-  const latestBPDate = getLatestBloodPressureDate(input);
-  if (!latestBPDate) {
-    blockedBy.push('No blood pressure readings available');
-  } else if (monthsSince(latestBPDate.toISOString()) > DATA_FRESHNESS.BLOOD_PRESSURE_MONTHS) {
-    blockedBy.push(`Blood pressure data is stale (${Math.floor(monthsSince(latestBPDate.toISOString()))} months old)`);
-  }
-
-  // Check cholesterol data
-  const latestCholesterolDate = getLatestCholesterolDate(input);
-  if (!latestCholesterolDate) {
-    blockedBy.push('No cholesterol test results available');
-  } else if (monthsSince(latestCholesterolDate.toISOString()) > DATA_FRESHNESS.CHOLESTEROL_MONTHS) {
-    blockedBy.push(`Cholesterol data is stale (${Math.floor(monthsSince(latestCholesterolDate.toISOString()))} months old)`);
-  }
-
-  // Check smoking status
-  if (!riskFactors.lifestyle?.smokingStatus) {
-    blockedBy.push('Smoking status not recorded');
-  }
-
-  // Check comorbidities (required for QRISK adjustment)
-  const requiredComorbidities = [
-    'type 1 diabetes',
-    'type 2 diabetes',
-    'chronic kidney disease',
-    'atrial fibrillation',
-    'rheumatoid arthritis',
+  // 2. Check required inputs
+  const requiredChecks = [
+    { field: 'systolicBp', label: 'Blood pressure (systolic)', present: input.systolicBp !== undefined },
+    { field: 'cholesterolRatio', label: 'Cholesterol ratio', present: input.cholesterolRatio !== undefined },
+    { field: 'smoker', label: 'Smoking status', present: typeof input.smoker === 'boolean' },
+    { field: 'bmi', label: 'Body mass index (BMI)', present: input.bmi !== undefined },
+    { field: 'sexAtBirth', label: 'Sex at birth', present: input.sexAtBirth !== undefined },
   ];
-  const hasComorbidityData = input.existingConditions !== undefined;
 
-  // Determine eligibility status
-  let status: 'eligible' | 'not_eligible' | 'unsure' = 'eligible';
-  let urgency: 'none' | 'routine' | 'soonest' | 'urgent' = 'routine';
-
-  if (blockedBy.length > 0) {
-    status = 'unsure';
-    urgency = 'none';
-
-    // If only missing comorbidity data, still potentially ready
-    const nonComorbidityBlocks = blockedBy.filter(b => !b.includes('comorbidity'));
-    if (nonComorbidityBlocks.length === 0 && !hasComorbidityData) {
-      blockedBy.length = 0; // Remove comorbidity block
-      status = 'eligible';
+  for (const check of requiredChecks) {
+    if (!check.present) {
+      missingData.push(check.label);
     }
   }
 
-  // Build reason
-  let reason = 'Patient has sufficient data for QRISK assessment';
-  if (status === 'unsure') {
-    reason = `QRISK assessment requires: ${blockedBy.join(', ')}`;
+  // 3. Determine readiness
+  if (missingData.length > 0) {
+    return {
+      ready: false,
+      missingData,
+      staleData,
+      status: 'incomplete',
+      explanation: buildExplanation('incomplete', missingData),
+    };
   }
 
   return {
-    screeningType: 'qrisk',
-    status,
-    reason,
-    urgency,
-    prerequisites,
-    blockedBy,
+    ready: true,
+    missingData: [],
+    staleData,
+    status: 'ready_for_estimate',
+    explanation: buildExplanation('ready_for_estimate', missingData),
   };
 }
 
 /**
- * Check if QRISK data is current
+ * Build explanation with appropriate disclaimer
  */
-export function hasCurrentQRiskData(input: RulesEngineInput): boolean {
-  const readiness = evaluateQRiskReadiness(input);
-  return readiness.status === 'eligible';
+function buildExplanation(status: string, missingData: string[]): string {
+  const disclaimerText = DISCLAIMER.join(' ');
+
+  if (status === 'not_calculated') {
+    return `${disclaimerText} Cardiovascular risk estimates designed for primary prevention are not used when existing cardiovascular disease is reported. This information would be discussed with a healthcare provider.`;
+  }
+
+  if (status === 'incomplete') {
+    return `${disclaimerText} Additional information is needed: ${missingData.join(', ')}. When these are available, an educational estimate may be shown. This is for information only, not clinical decision support.`;
+  }
+
+  if (status === 'ready_for_estimate') {
+    return `${disclaimerText} Sufficient information is available for an educational cardiovascular risk estimate. This is informational only and does not provide clinical decision support or medical advice.`;
+  }
+
+  return disclaimerText;
 }
 
 /**
- * Get QRISK required data fields
+ * Check if a specific field is missing for QRISK readiness
  */
-export function getQRiskRequiredFields(): string[] {
-  return [
-    'age',
-    'sex',
-    'blood_pressure',
-    'cholesterol',
-    'smoking_status',
-    'ethnicity',
-    'postcode',
-    'comorbidities',
-  ];
+export function isMissingForQrisk(input: PatientInput, field: keyof PatientInput): boolean {
+  if (input.hasCvd === true) return false;
+  if (field === 'systolicBp') return input.systolicBp === undefined;
+  if (field === 'cholesterolRatio') return input.cholesterolRatio === undefined;
+  if (field === 'smoker') return typeof input.smoker !== 'boolean';
+  if (field === 'bmi') return input.bmi === undefined;
+  if (field === 'sexAtBirth') return input.sexAtBirth === undefined;
+  return false;
 }
