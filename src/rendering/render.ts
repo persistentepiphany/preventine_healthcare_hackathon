@@ -51,9 +51,34 @@ export async function renderAssessment(
     if (parsed.services.length > 0) {
       return cloneCard(SAFE_FALLBACK_CARD);
     }
+    if (urgentTextLeaks(parsed)) {
+      return cloneCard(SAFE_FALLBACK_CARD);
+    }
   }
 
   return parsed;
+}
+
+/**
+ * Urgent-only text guard. Sweeps the rendered card for preventive / Health
+ * Check / pharmacy framing that the urgent_care branch must never carry. This
+ * is the post-LLM mirror of the engine's removed urgent-only forbidden_claims
+ * — kept in render.ts (scoped to urgent context) rather than in
+ * FORBIDDEN_OUTPUT_TOKENS (global, broad) because adding "preventive" / "health
+ * check" / "pharmacy" to the global list would break legitimate framing on
+ * the pharmacy_bp_check and ask_gp_or_pharmacy branches.
+ *
+ * Mirrors the system_prompt rule: "Urgent care: ... No preventive advice. No
+ * Health Check. No pharmacy. services is []."
+ */
+const URGENT_TEXT_LEAK_TOKENS = ["health check", "preventive", "pharmacy"] as const;
+
+function urgentTextLeaks(card: CardJson): boolean {
+  const text = `${card.headline}\n${card.body}\n${card.next_step}`.toLowerCase();
+  for (const t of URGENT_TEXT_LEAK_TOKENS) {
+    if (text.includes(t)) return true;
+  }
+  return false;
 }
 
 function cloneCard(card: Readonly<CardJson>): CardJson {
