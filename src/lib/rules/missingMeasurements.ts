@@ -1,140 +1,116 @@
 /**
  * Missing measurements identification module
  *
- * Identifies which measurements are missing or out of date
- * for a complete preventive care assessment.
+ * Identifies which measurements are missing for a complete
+ * preventive care assessment before GP/pharmacy/NHS Health Check conversation.
  */
 
-import type {
-  RulesEngineInput,
-  ScreeningType,
-} from './types';
-import { DATA_FRESHNESS } from './constants';
+import type { PatientInput } from './types';
 
 /**
- * Calculate months since a given date
+ * Missing measurement with context
  */
-function monthsSince(dateString: string): number {
-  const date = new Date(dateString);
-  const now = new Date();
-  const months = (now.getFullYear() - date.getFullYear()) * 12 +
-    (now.getMonth() - date.getMonth());
-  return months;
+export interface MissingMeasurement {
+  /** Unique identifier for the measurement */
+  key: string;
+
+  /** Human-readable label */
+  label: string;
+
+  /** Why this measurement matters for preventive care */
+  whyItMatters: string;
+
+  /** Suggested source for obtaining this measurement */
+  suggestedSource: 'pharmacy' | 'nhs_health_check' | 'self_report' | 'gp_record';
+
+  /** Priority level */
+  priority: 'high' | 'medium' | 'low';
 }
 
 /**
- * Get latest date from a set of date-recorded items
+ * Find missing measurements for a patient
+ *
+ * Identifies which preventive-care measurements are missing before
+ * a proper GP/pharmacy/NHS Health Check conversation.
  */
-function getLatestDate<T extends { dateRecorded: string }>(
-  items: T[] | undefined
-): Date | null {
-  if (!items || items.length === 0) return null;
-  return items.reduce((latest, item) => {
-    const itemDate = new Date(item.dateRecorded);
-    return itemDate > latest ? itemDate : latest;
-  }, new Date(0));
-}
+export function findMissingMeasurements(input: PatientInput): MissingMeasurement[] {
+  const missing: MissingMeasurement[] = [];
 
-/**
- * Identify missing or stale measurements
- */
-export function identifyMissingMeasurements(input: RulesEngineInput): ScreeningType[] {
-  const missing: ScreeningType[] = [];
-
-  // Check blood pressure
-  const latestBP = getLatestDate(input.bloodPressureHistory);
-  if (!latestBP || monthsSince(latestBP.toISOString()) > DATA_FRESHNESS.BLOOD_PRESSURE_MONTHS) {
-    missing.push('blood_pressure');
+  // 1. Blood pressure - high priority
+  if (!input.systolicBp || !input.diastolicBp) {
+    missing.push({
+      key: 'blood_pressure',
+      label: 'Blood pressure reading',
+      whyItMatters: 'Blood pressure is one of the key measurements used to assess heart health and stroke risk. Knowing your numbers helps you and your healthcare provider understand if any changes or monitoring is needed.',
+      suggestedSource: 'pharmacy',
+      priority: 'high',
+    });
   }
 
-  // Check cholesterol
-  const latestCholesterol = getLatestDate(
-    input.bloodTestHistory?.filter(b => b.type === 'cholesterol')
-  );
-  if (!latestCholesterol || monthsSince(latestCholesterol.toISOString()) > DATA_FRESHNESS.CHOLESTEROL_MONTHS) {
-    missing.push('cholesterol');
+  // 2. Cholesterol/HDL ratio - high priority
+  if (input.cholesterolRatio === undefined) {
+    missing.push({
+      key: 'cholesterol_hdl_ratio',
+      label: 'Cholesterol ratio',
+      whyItMatters: 'The ratio of total cholesterol to HDL (good cholesterol) provides information about heart health. This measurement is typically included in an NHS Health Check.',
+      suggestedSource: 'nhs_health_check',
+      priority: 'high',
+    });
   }
 
-  // Check HbA1c (age and risk dependent)
-  const latestHbA1c = getLatestDate(
-    input.bloodTestHistory?.filter(b => b.type === 'hba1c')
-  );
-  const needsHbA1c = input.demographics.age >= 40 ||
-    input.riskFactors.familyHistory?.diabetes ||
-    input.riskFactors.comorbidities?.some(c =>
-      c.toLowerCase().includes('diabetes') ||
-      c.toLowerCase().includes('prediabetes')
-    );
-
-  if (needsHbA1c && (!latestHbA1c || monthsSince(latestHbA1c.toISOString()) > DATA_FRESHNESS.HBA1C_MONTHS)) {
-    missing.push('hba1c');
+  // 3. BMI or waist measurement - medium priority (both missing)
+  if (input.bmi === undefined && input.waistCm === undefined) {
+    missing.push({
+      key: 'bmi_or_waist',
+      label: 'BMI or waist measurement',
+      whyItMatters: 'Body measurements help assess overall health. BMI relates weight to height, while waist measurement can indicate excess fat around the midsection. Having at least one of these measurements is helpful for understanding general health.',
+      suggestedSource: 'self_report',
+      priority: 'medium',
+    });
   }
 
-  // Check BMI
-  const latestBMI = getLatestDate(input.measurements?.filter(m => m.type === 'bmi'));
-  if (!latestBMI || monthsSince(latestBMI.toISOString()) > DATA_FRESHNESS.BMI_MONTHS) {
-    missing.push('bmi');
+  // 4. Smoking status - medium priority
+  if (typeof input.smoker !== 'boolean') {
+    missing.push({
+      key: 'smoking_status',
+      label: 'Smoking status',
+      whyItMatters: 'Knowing whether someone smokes, used to smoke, or has never smoked is relevant for understanding overall health factors. This information helps healthcare providers provide appropriate guidance.',
+      suggestedSource: 'self_report',
+      priority: 'medium',
+    });
   }
 
-  // Check smoking status (from risk factors)
-  if (!input.riskFactors.lifestyle?.smokingStatus) {
-    missing.push('smoking_review');
-  }
-
-  // Check alcohol status (from risk factors)
-  if (input.riskFactors.lifestyle?.alcoholUnitsPerWeek === undefined) {
-    missing.push('alcohol_review');
+  // 5. Family history of cardiovascular disease - low priority
+  if (typeof input.familyHistoryCvd !== 'boolean') {
+    missing.push({
+      key: 'family_history',
+      label: 'Family history of heart or stroke conditions',
+      whyItMatters: 'Family history can provide context about inherited health factors. This information helps healthcare providers understand the full picture when discussing preventive care.',
+      suggestedSource: 'self_report',
+      priority: 'low',
+    });
   }
 
   return missing;
 }
 
 /**
- * Check if a specific measurement type is missing or stale
+ * Check if any high-priority measurements are missing
  */
-export function isMeasurementMissing(
-  input: RulesEngineInput,
-  measurementType: ScreeningType
-): boolean {
-  const missing = identifyMissingMeasurements(input);
-  return missing.includes(measurementType);
+export function hasHighPriorityMissing(input: PatientInput): boolean {
+  return findMissingMeasurements(input).some(m => m.priority === 'high');
 }
 
 /**
- * Get priority order for completing missing measurements
+ * Get count of missing measurements by priority
  */
-export function getMeasurementPriorityOrder(): ScreeningType[] {
-  return [
-    'blood_pressure',
-    'cholesterol',
-    'bmi',
-    'hba1c',
-    'smoking_review',
-    'alcohol_review',
-  ];
-}
-
-/**
- * Categorize missing measurements by criticality
- */
-export function categorizeMissingMeasurements(
-  input: RulesEngineInput
-): { critical: ScreeningType[]; recommended: ScreeningType[]; optional: ScreeningType[] } {
-  const missing = identifyMissingMeasurements(input);
-
-  const critical: ScreeningType[] = [];
-  const recommended: ScreeningType[] = [];
-  const optional: ScreeningType[] = [];
-
-  for (const measurement of missing) {
-    if (['blood_pressure', 'cholesterol', 'bmi'].includes(measurement)) {
-      critical.push(measurement);
-    } else if (['smoking_review', 'alcohol_review'].includes(measurement)) {
-      recommended.push(measurement);
-    } else {
-      optional.push(measurement);
-    }
-  }
-
-  return { critical, recommended, optional };
+export function countMissingByPriority(
+  input: PatientInput
+): { high: number; medium: number; low: number } {
+  const missing = findMissingMeasurements(input);
+  return {
+    high: missing.filter(m => m.priority === 'high').length,
+    medium: missing.filter(m => m.priority === 'medium').length,
+    low: missing.filter(m => m.priority === 'low').length,
+  };
 }
