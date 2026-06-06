@@ -1,267 +1,225 @@
 /**
- * Recommendation generation module
+ * Recommendation builder - converts assessment to frontend cards
  *
- * Generates actionable recommendations based on eligibility results
- * and identified missing measurements.
+ * Generates actionable, cautious recommendations from rules-engine output.
+ * Does NOT diagnose, prescribe, or state what the user definitely needs.
  *
- * Principles:
- * - Recommendations are actionable and clear
- * - No diagnosis or treatment advice
- * - Focus on data collection and screening scheduling
+ * Each recommendation includes:
+ * - title
+ * - priority
+ * - serviceType (routing to: NHS Health Check | Pharmacy | GP | Screening)
+ * - message (careful wording)
  */
 
 import type {
-  RulesEngineInput,
+  PatientInput,
   Recommendation,
-  RecommendationAction,
-  EligibilityResult,
+  HealthCheckEligibility,
+  ScreeningMatch,
+  MissingMeasurement,
+  QriskReadiness,
   ScreeningType,
 } from './types';
-import { SAFETY_CONSTRAINTS } from './constants';
 
 /**
- * Generate a unique ID for recommendations
+ * Service routing types for frontend
  */
-function generateId(category: ScreeningType, action: string): string {
+export type ServiceType =
+  | 'nhs_health_check'
+  | 'pharmacy'
+  | 'gp'
+  | 'screening';
+
+/**
+ * Frontend-friendly recommendation card
+ */
+export interface RecommendationCard {
+  id: string;
+  title: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  serviceType: ServiceType;
+  message: string;
+  target: 'patient' | 'clinician' | 'both';
+}
+
+/**
+ * Generate unique ID for recommendation
+ */
+function generateId(category: string, action: string): string {
   const timestamp = Date.now().toString(36);
   return `${category}_${action}_${timestamp}`;
 }
 
 /**
- * Determine priority from urgency level
+ * Convert service type to routing string
  */
-function priorityFromUrgency(urgency: 'none' | 'routine' | 'soonest' | 'urgent'): 'low' | 'medium' | 'high' {
-  switch (urgency) {
-    case 'urgent':
-      return 'high';
-    case 'soonest':
-      return 'high';
-    case 'routine':
-      return 'medium';
-    default:
-      return 'low';
+function serviceTypeToRouting(service: ServiceType): string {
+  switch (service) {
+    case 'nhs_health_check':
+      return 'NHS Health Check';
+    case 'pharmacy':
+      return 'Pharmacy';
+    case 'gp':
+      return 'GP';
+    case 'screening':
+      return 'Screening';
   }
 }
 
 /**
- * Create recommendation for missing measurements
+ * Map screening type to category
  */
-function createMeasurementRecommendation(
-  measurementType: ScreeningType,
-  critical: boolean
-): Recommendation {
-  const action: RecommendationAction = 'update_measurements';
-  const priority = critical ? 'high' : 'medium';
-
-  const titles: Record<ScreeningType, string> = {
-    health_check: 'Update NHS Health Check data',
-    qrisk: 'Complete QRISK assessment data',
-    blood_pressure: 'Record blood pressure',
-    cholesterol: 'Request cholesterol blood test',
-    hba1c: 'Request HbA1c blood test',
-    bmi: 'Update height and weight',
-    smoking_review: 'Update smoking status',
-    alcohol_review: 'Update alcohol consumption',
-    cervical_screening: 'Review cervical screening records',
-    breast_screening: 'Review breast screening records',
-    colorectal_screening: 'Review colorectal screening records',
-    abdominal_aortic_aneurysm: 'Review AAA screening records',
-    diabetic_eye_screening: 'Review diabetic eye screening records',
-  };
-
-  const descriptions: Record<ScreeningType, string> = {
-    health_check: 'Complete NHS Health Check questionnaire and measurements',
-    qrisk: 'Provide data required for cardiovascular risk assessment',
-    blood_pressure: 'Blood pressure reading needed for accurate risk assessment',
-    cholesterol: 'Cholesterol test result needed for preventive care planning',
-    hba1c: 'HbA1c test needed for diabetes risk assessment',
-    bmi: 'Height and weight needed to calculate BMI',
-    smoking_review: 'Current smoking status required for risk assessment',
-    alcohol_review: 'Weekly alcohol consumption required for risk assessment',
-    cervical_screening: 'Check records for previous cervical screening results',
-    breast_screening: 'Check records for previous breast screening results',
-    colorectal_screening: 'Check records for previous bowel screening results',
-    abdominal_aortic_aneurysm: 'Check records for previous AAA screening',
-    diabetic_eye_screening: 'Check records for previous diabetic eye screening',
-  };
-
-  return {
-    id: generateId(measurementType, action),
-    action,
-    priority,
-    category: measurementType,
-    title: titles[measurementType],
-    description: descriptions[measurementType],
-    applicableSince: new Date().toISOString().split('T')[0],
-  };
+function screeningTypeToCategory(type: ScreeningType): ScreeningType {
+  return type;
 }
 
 /**
- * Create recommendation for eligible screening
+ * Build recommendations from assessment data
+ *
+ * Rules:
+ * 1. NHS Health Check possibly_eligible → high priority, ask GP
+ * 2. Missing blood pressure → high priority, pharmacy
+ * 3. Missing cholesterol/HDL → high priority, GP
+ * 4. Smoker → medium priority, pharmacy (stop-smoking support)
+ * 5. Screening matches → medium priority, screening
+ * 6. QRISK incomplete → medium priority, GP (explain, no score)
+ *
+ * All messaging uses cautious wording. No definitive statements.
  */
-function createScreeningRecommendation(eligibility: EligibilityResult): Recommendation {
-  const action: RecommendationAction = 'book_appointment';
-  const priority = priorityFromUrgency(eligibility.urgency);
+export function buildRecommendations(
+  input: PatientInput,
+  eligibility: HealthCheckEligibility,
+  screening: ScreeningMatch[],
+  missing: MissingMeasurement[],
+  qrisk: QriskReadiness
+): RecommendationCard[] {
+  const recommendations: RecommendationCard[] = [];
 
-  const titles: Record<ScreeningType, string> = {
-    health_check: 'Book NHS Health Check',
-    qrisk: 'Complete QRISK assessment',
-    blood_pressure: 'Schedule blood pressure check',
-    cholesterol: 'Schedule cholesterol test',
-    hba1c: 'Schedule HbA1c test',
-    bmi: 'Update BMI measurements',
-    smoking_review: 'Review smoking status with clinician',
-    alcohol_review: 'Review alcohol consumption with clinician',
-    cervical_screening: 'Book cervical screening appointment',
-    breast_screening: 'Book breast screening appointment',
-    colorectal_screening: 'Request bowel screening kit',
-    abdominal_aortic_aneurysm: 'Book AAA screening appointment',
-    diabetic_eye_screening: 'Book diabetic eye screening',
-  };
-
-  const urgencyText: Record<typeof eligibility.urgency, string> = {
-    none: '',
-    routine: 'Routine',
-    soonest: 'Schedule at earliest opportunity',
-    urgent: 'Urgent - book as soon as possible',
-  };
-
-  const description = eligibility.dueDate
-    ? `${urgencyText[eligibility.urgency]}. Due by ${eligibility.dueDate}.`
-    : urgencyText[eligibility.urgency] || eligibility.reason;
-
-  return {
-    id: generateId(eligibility.screeningType, action),
-    action,
-    priority,
-    category: eligibility.screeningType,
-    title: titles[eligibility.screeningType],
-    description,
-    applicableSince: new Date().toISOString().split('T')[0],
-  };
-}
-
-/**
- * Create recommendation for clinician review
- */
-function createClinicianReviewRecommendation(reason: string): Recommendation {
-  return {
-    id: generateId('review', 'clinician'),
-    action: 'review_with_clinician',
-    priority: 'high',
-    category: 'health_check',
-    title: 'Review with clinician',
-    description: reason,
-    applicableSince: new Date().toISOString().split('T')[0],
-  };
-}
-
-/**
- * Generate recommendations from eligibility results
- */
-export function generateRecommendations(
-  input: RulesEngineInput,
-  eligibilityResults: EligibilityResult[],
-  missingMeasurements: ScreeningType[]
-): Recommendation[] {
-  const recommendations: Recommendation[] = [];
-
-  // Priority 1: Urgent and soonest eligible screenings
-  const urgentEligible = eligibilityResults.filter(e =>
-    e.status === 'eligible' &&
-    (e.urgency === 'urgent' || e.urgency === 'soonest')
-  );
-
-  for (const eligibility of urgentEligible) {
-    recommendations.push(createScreeningRecommendation(eligibility));
+  // Rule 1: NHS Health Check eligibility
+  if (eligibility.status === 'possibly_eligible' && eligibility.ageEligible) {
+    recommendations.push({
+      id: generateId('health_check', 'ask'),
+      title: 'Ask about an NHS Health Check',
+      priority: 'high',
+      serviceType: 'nhs_health_check',
+      message: 'You may be eligible for an NHS Health Check. This is a free health check-up for adults aged 40-74. Ask your GP practice about booking one.',
+      target: 'patient',
+    });
   }
 
-  // Priority 2: Critical missing measurements
-  const criticalMeasurements = missingMeasurements.filter(m =>
-    ['blood_pressure', 'cholesterol', 'bmi'].includes(m)
-  );
-
-  for (const measurement of criticalMeasurements) {
-    recommendations.push(createMeasurementRecommendation(measurement, true));
+  // Rule 2: Missing blood pressure
+  if (missing.some(m => m.measurementType === 'blood_pressure')) {
+    recommendations.push({
+      id: generateId('blood_pressure', 'check'),
+      title: 'Get a blood pressure check',
+      priority: 'high',
+      serviceType: 'pharmacy',
+      message: 'Blood pressure readings may help with health planning. Many pharmacies offer free checks. Ask about getting a reading.',
+      target: 'patient',
+    });
   }
 
-  // Priority 3: Routine eligible screenings
-  const routineEligible = eligibilityResults.filter(e =>
-    e.status === 'eligible' && e.urgency === 'routine'
-  );
-
-  for (const eligibility of routineEligible) {
-    recommendations.push(createScreeningRecommendation(eligibility));
+  // Rule 3: Missing cholesterol/HDL ratio
+  if (missing.some(m => m.measurementType === 'cholesterol')) {
+    recommendations.push({
+      id: generateId('cholesterol', 'test'),
+      title: 'Ask about cholesterol testing',
+      priority: 'high',
+      serviceType: 'gp',
+      message: 'Cholesterol levels may be relevant for preventive care planning. Ask your GP about whether testing might be appropriate.',
+      target: 'patient',
+    });
   }
 
-  // Priority 4: Recommended missing measurements
-  const recommendedMeasurements = missingMeasurements.filter(m =>
-    !criticalMeasurements.includes(m)
-  );
-
-  for (const measurement of recommendedMeasurements) {
-    recommendations.push(createMeasurementRecommendation(measurement, false));
+  // Rule 4: Current smoker
+  if (input.smoker === true) {
+    recommendations.push({
+      id: generateId('smoking', 'support'),
+      title: 'Ask about stop-smoking support',
+      priority: 'medium',
+      serviceType: 'pharmacy',
+      message: 'Stopping smoking may benefit health. Support is available through pharmacies, GPs, and NHS services. Ask about options.',
+      target: 'patient',
+    });
   }
 
-  // Sort by priority
-  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  // Rule 5: Screening matches
+  for (const match of screening) {
+    if (match.status === 'possibly_eligible') {
+      const titles: Record<ScreeningType, string> = {
+        health_check: 'Ask about NHS Health Check',
+        qrisk: 'Ask about cardiovascular risk assessment',
+        blood_pressure: 'Ask about blood pressure check',
+        cholesterol: 'Ask about cholesterol test',
+        hba1c: 'Ask about HbA1c test',
+        bmi: 'Ask about BMI assessment',
+        smoking_review: 'Ask about smoking review',
+        alcohol_review: 'Ask about alcohol review',
+        cervical_screening: 'Ask about cervical screening',
+        breast_screening: 'Ask about breast screening',
+        colorectal_screening: 'Ask about bowel screening',
+        abdominal_aortic_aneurysm: 'Ask about AAA screening',
+        diabetic_eye_screening: 'Ask about diabetic eye screening',
+      };
+
+      recommendations.push({
+        id: generateId(match.screeningType, 'screening'),
+        title: titles[match.screeningType],
+        priority: 'medium',
+        serviceType: 'screening',
+        message: match.explanation || 'This may be a possible screening route. Check NHS invitation status or ask your GP.',
+        target: 'patient',
+      });
+    }
+  }
+
+  // Rule 6: QRISK incomplete
+  if (!qrisk.ready && qrisk.missingData.length > 0) {
+    recommendations.push({
+      id: generateId('qrisk', 'complete'),
+      title: 'Complete health information for risk assessment',
+      priority: 'medium',
+      serviceType: 'gp',
+      message: `Some information may be needed before any cardiovascular risk assessment can be considered: ${qrisk.missingData.join(', ')}. Discuss with your GP.`,
+      target: 'patient',
+    });
+  }
+
+  // Sort by priority: critical > high > medium > low
+  const priorityOrder: Record<RecommendationCard['priority'], number> = {
+    critical: 0,
+    high: 1,
+    medium: 2,
+    low: 3,
+  };
+
   recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 
-  // Enforce maximum recommendations
-  return recommendations.slice(0, SAFETY_CONSTRAINTS.MAX_RECOMMENDATIONS);
+  return recommendations;
 }
 
 /**
- * Get lifestyle recommendations based on risk factors
+ * Convert RecommendationCard to Recommendation type (for compatibility)
  */
-export function getLifestyleRecommendations(
-  input: RulesEngineInput
-): Recommendation[] {
-  const recommendations: Recommendation[] = [];
-  const { riskFactors } = input;
+export function toRecommendation(
+  card: RecommendationCard,
+  category: ScreeningType
+): Recommendation {
+  const actionMap: Record<ServiceType, Recommendation['action']> = {
+    nhs_health_check: 'book_appointment',
+    pharmacy: 'self_monitor',
+    gp: 'review_with_clinician',
+    screening: 'book_appointment',
+  };
 
-  // Smoking-related
-  if (riskFactors.lifestyle?.smokingStatus === 'current') {
-    recommendations.push({
-      id: generateId('smoking', 'lifestyle'),
-      action: 'lifestyle_consideration',
-      priority: 'medium',
-      category: 'smoking_review',
-      title: 'Smoking cessation support',
-      description: 'Support available for stopping smoking. Discuss with clinician or pharmacist.',
-      applicableSince: new Date().toISOString().split('T')[0],
-    });
-  }
-
-  // Alcohol-related
-  if (riskFactors.lifestyle?.alcoholUnitsPerWeek &&
-      riskFactors.lifestyle.alcoholUnitsPerWeek > 14) {
-    const isHighRisk = riskFactors.lifestyle.alcoholUnitsPerWeek > 50;
-    recommendations.push({
-      id: generateId('alcohol', 'lifestyle'),
-      action: 'lifestyle_consideration',
-      priority: isHighRisk ? 'high' : 'medium',
-      category: 'alcohol_review',
-      title: 'Alcohol consumption review',
-      description: isHighRisk
-        ? 'Current alcohol consumption exceeds recommended limits. Clinician review recommended.'
-        : 'Current alcohol consumption above lower-risk guidelines. Consider reducing intake.',
-      applicableSince: new Date().toISOString().split('T')[0],
-    });
-  }
-
-  // Family history
-  if (riskFactors.familyHistory?.cardiovascularDisease) {
-    recommendations.push({
-      id: generateId('family_cv', 'info'),
-      action: 'information_only',
-      priority: 'low',
-      category: 'health_check',
-      title: 'Cardiovascular risk awareness',
-      description: 'Family history of cardiovascular disease noted. Regular monitoring recommended.',
-      applicableSince: new Date().toISOString().split('T')[0],
-    });
-  }
-
-  return recommendations;
+  return {
+    id: card.id,
+    action: actionMap[card.serviceType],
+    priority: card.priority,
+    category,
+    title: card.title,
+    description: card.message,
+    applicableSince: new Date().toISOString().split('T')[0],
+    target: card.target,
+  };
 }
