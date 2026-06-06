@@ -1,34 +1,87 @@
 /* Resources, Support, Profile, and Login pages */
 
-/* ---------- Login (Live mode gate) ---------- */
+/* ---------- Login (Live mode gate) ----------
+   Prototype credentials — intentionally hard-coded so the deployed demo
+   always works. Not sensitive: this is a no-backend, no-PII prototype. */
+const DEMO_EMAIL = "testuser@gmail.com";
+const DEMO_PASSWORD = "testpass123";
+
 function Login({ app }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [step, setStep] = useState("idle"); // idle | signing
-  const D = window.APP_DATA;
   const steps = [
-    { text: "Opening NHS login", result: "Secure", tone: "ok" },
-    { text: "Verifying identity", result: "Verified", tone: "ok" },
+    { text: "Verifying credentials", result: "OK", tone: "ok" },
     { text: "Preparing your space", result: "Ready", tone: "ok" },
   ];
+
+  function submit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const em = email.trim().toLowerCase();
+    if (!em || !password) {
+      setError("Enter an email and password.");
+      return;
+    }
+    if (em !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
+      setError("Use the demo credentials shown below.");
+      return;
+    }
+    setError("");
+    setStep("signing");
+  }
+
+  function fillDemo() {
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    setError("");
+  }
+
   return (
     <div className="login">
       <div className="login-card">
         <span className="login-mark"><Icon name="shield" size={26} stroke={1.8} /></span>
-        <h1 className="login-title">Sign in to use your own data</h1>
+        <h1 className="login-title">Sign in</h1>
         <p className="login-sub">
-          Live mode links your real NHS record and builds your report from scratch. In this prototype
-          nothing leaves your browser.
+          Live mode unlocks your personal report. This is an educational prototype — your sign-in
+          stays in your browser.
         </p>
         {step === "idle" ? (
-          <>
-            <button className="login-btn" onClick={() => setStep("signing")}>
-              <Icon name="shield" size={17} stroke={1.9} /> Continue with NHS login
+          <form onSubmit={submit} style={{ textAlign: "left" }}>
+            <label className="login-field-label">Email</label>
+            <input
+              type="email"
+              className="login-input"
+              autoComplete="username"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <label className="login-field-label">Password</label>
+            <input
+              type="password"
+              className="login-input"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {error && <div className="login-error"><Icon name="info" size={12} stroke={1.8} /> {error}</div>}
+            <button type="submit" className="login-btn" style={{ marginTop: 14 }}>
+              <Icon name="arrowRight" size={16} stroke={2} /> Sign in
             </button>
-            <button className="login-alt" onClick={() => app.setMode("demo")}>Use the demo profile instead</button>
+            <button type="button" className="login-alt" onClick={() => app.setMode("demo")}>Use the demo profile instead</button>
+            <div className="login-demo-creds">
+              <div className="login-demo-creds-h">Demo account</div>
+              <div className="login-demo-creds-row"><span>Email</span><code>{DEMO_EMAIL}</code></div>
+              <div className="login-demo-creds-row"><span>Password</span><code>{DEMO_PASSWORD}</code></div>
+              <button type="button" className="login-demo-fill" onClick={fillDemo}>Fill demo credentials</button>
+            </div>
             <div className="login-foot"><Icon name="info" size={12} stroke={1.8} /> Educational prototype — not connected to live NHS systems.</div>
-          </>
+          </form>
         ) : (
           <div className="login-engine">
-            <EngineRun steps={steps} title="Signing you in" sub="NHS login · secure" doneLabel="Signed in" holdMs={620} onDone={() => app.signIn()} />
+            <EngineRun steps={steps} title="Signing you in" sub={email} doneLabel="Signed in" holdMs={520} onDone={() => app.signIn()} />
           </div>
         )}
       </div>
