@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import type { LocalPreventiveContextWaitingTimes } from "../contracts/local_preventive_context.js";
+import { normalisePostcode } from "./postcode.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WAITING_TIMES_PATH = join(
@@ -25,11 +26,46 @@ export interface WaitingTimesResult {
 }
 
 /**
- * Reads the cached area-level waiting-time context. Always pins
- * isPersonalPrediction=false and attaches a disclaimer — the renderer can then
- * never accidentally personalise it.
+ * Generic NHS-wide prose used when we have no area-specific signal for the
+ * given postcode. We are NOT genuinely estimating waits — we never have been —
+ * but the previous code was actively lying for non-Manchester postcodes by
+ * serving Greater-Manchester prose. This generic version sidesteps the
+ * area-claim entirely.
  */
-export async function getWaitingTimeContext(): Promise<WaitingTimesResult> {
+const GENERIC_WAITING_TIMES: LocalPreventiveContextWaitingTimes = {
+  description:
+    "Routine GP appointment availability varies by practice and time of year. " +
+    "Same-day urgent slots are usually available at your registered GP, and " +
+    "free walk-in blood-pressure checks are offered at many community " +
+    "pharmacies in England.",
+  isPersonalPrediction: false,
+  disclaimer:
+    "This is a general NHS-wide signal, not a personal prediction. Your own " +
+    "wait will depend on your GP practice and your reason for booking.",
+};
+
+function isManchesterArea(postcode: string): boolean {
+  const outward = normalisePostcode(postcode).split(" ")[0] ?? "";
+  return /^M\d/.test(outward);
+}
+
+/**
+ * Returns area-level waiting-time prose. Always pins isPersonalPrediction=false
+ * so the renderer can never accidentally personalise it.
+ *
+ *  - undefined or Manchester postcode → the Greater Manchester cached prose
+ *    (preserves the canonical demo behaviour).
+ *  - Any other postcode → generic NHS-wide prose. Still status="cached"
+ *    because the cache is what's serving it, but the area claim is dropped.
+ */
+export async function getWaitingTimeContext(
+  postcode?: string,
+): Promise<WaitingTimesResult> {
+  const trimmed = (postcode ?? "").trim();
+  if (trimmed.length > 0 && !isManchesterArea(trimmed)) {
+    return { data: GENERIC_WAITING_TIMES, status: "cached" };
+  }
+
   try {
     const raw = await readFile(WAITING_TIMES_PATH, "utf8");
     const parsed = JSON.parse(raw) as WaitingTimesFile;

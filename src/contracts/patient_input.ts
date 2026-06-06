@@ -13,9 +13,30 @@ import { z } from "zod";
 export const SmokingStatusSchema = z.enum(["never", "former", "current"]);
 export type SmokingStatus = z.infer<typeof SmokingStatusSchema>;
 
+/**
+ * Sex assigned at birth. Optional in the seam (a patient may decline). The
+ * rich engine uses it for QRISK readiness and sex-specific screening
+ * eligibility (cervical, AAA). The seam engine ignores it — `sexAtBirth`
+ * does not change any next_step_type / eligibility decision the seam makes.
+ *
+ * Why this is on the seam: without it the rich engine's QRISK readiness
+ * always reports "Sex at birth" missing, even when the patient gave us full
+ * BP / cholesterol / BMI / smoking. The data gap is real — we just had no
+ * slot to fill it from.
+ */
+export const SexAtBirthSchema = z.enum([
+  "male",
+  "female",
+  "intersex",
+  "prefer_not_to_say",
+]);
+export type SexAtBirth = z.infer<typeof SexAtBirthSchema>;
+
 export const PatientInputSchema = z.object({
   age: z.number().int().min(0).max(120),
   livesInEngland: z.boolean(),
+  /** Optional. Powers rich-engine QRISK + sex-specific screening only. */
+  sexAtBirth: SexAtBirthSchema.optional(),
 
   // NHS Health Check exclusion conditions. Any true => not_eligible_existing_condition.
   hasCvd: z.boolean(),

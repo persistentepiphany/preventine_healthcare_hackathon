@@ -30,9 +30,9 @@ export async function getLocalPreventiveContext(
     await Promise.allSettled([
       fetchPostcode(rawPostcode),
       fetchNearbyServices(rawPostcode),
-      getWaitingTimeContext(),
+      getWaitingTimeContext(rawPostcode),
       getOfficialContent(),
-      fetchPopulationContextSafe(),
+      fetchPopulationContextSafe(rawPostcode),
     ]);
 
   // Postcode

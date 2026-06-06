@@ -62,6 +62,7 @@ export function toRichInput(input: SeamPatientInput): RichPatientInput {
 
   return {
     age: input.age,
+    sexAtBirth: input.sexAtBirth,
     smoker: input.smokingStatus === "current",
     hasCvd: input.hasCvd,
     hasDiabetes: input.hasDiabetes,

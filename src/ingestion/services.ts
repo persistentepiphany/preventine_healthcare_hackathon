@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import type { LocalPreventiveContextService } from "../contracts/local_preventive_context.js";
+import { normalisePostcode } from "./postcode.js";
 
 /**
  * Nearby services adapter. The DoHS sandbox is functional but ships a tiny
@@ -44,16 +45,51 @@ async function loadDemoServices(): Promise<LocalPreventiveContextService[]> {
 }
 
 /**
- * For the demo we never go live — the sandbox is unusable for any postcode the
- * demo cares about. This function still returns a status of "cached" so the
- * orchestrator can surface the right badge.
+ * The cached pack is hand-picked Manchester (M-area) practices and a single
+ * Manchester hospital. Returning it for a London or Edinburgh postcode would
+ * put wrong-area GPs in front of the patient. We gate on the outward code:
  *
- * The signature is kept open (`postcode` arg, `live` option) so a follow-up
+ *  - Manchester area (outward code starts with "M" followed by a digit) →
+ *    cached Manchester pack, status="cached".
+ *  - Empty / undefined / unknown postcode → cached pack with status="cached".
+ *    (Preserves the historical "no postcode given" behaviour the orchestrator
+ *    and direct tests rely on.)
+ *  - Any other area → empty list, status="missing". Honest signal: we have no
+ *    service data for this area, the UI should badge it as missing rather
+ *    than show wrong-area services.
+ *
+ * The signature stays open (postcode arg, `live` option) so a follow-up
  * turn can wire a real DoHS endpoint without re-shaping the orchestrator.
  */
+function isManchesterArea(postcode: string): boolean {
+  const norm = normalisePostcode(postcode);
+  // Outward code = everything before the space. Manchester postcodes are
+  // M1..M99 (e.g. "M13 9PL" → "M13"). "ME" is Medway, "MK" is Milton Keynes;
+  // exclude those by requiring a digit right after the M.
+  const outward = norm.split(" ")[0] ?? "";
+  return /^M\d/.test(outward);
+}
+
 export async function fetchNearbyServices(
-  _postcode: string,
+  postcode: string,
 ): Promise<ServicesFetchResult> {
+  // Empty / whitespace postcode → treat as "no area filter" and serve the
+  // cached pack (this is what the integration tests + HTTP route assume when
+  // a caller hits the services endpoint without a real postcode).
+  const trimmed = (postcode ?? "").trim();
+  if (trimmed.length === 0) {
+    try {
+      const services = await loadDemoServices();
+      return { services, status: "cached" };
+    } catch {
+      return { services: [], status: "missing" };
+    }
+  }
+
+  if (!isManchesterArea(trimmed)) {
+    return { services: [], status: "missing" };
+  }
+
   try {
     const services = await loadDemoServices();
     return { services, status: "cached" };
