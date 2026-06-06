@@ -12,15 +12,16 @@
     "smoke": "tsx scripts/smoke.ts",
     "demo": "tsx scripts/demo.ts",
     "dev:api": "tsx src/http/server.ts",
-    "dev:ui": "tsx scripts/serve-ui.ts"
+    "dev:ui": "tsx scripts/serve-ui.ts",
+    "start": "tsx src/http/server.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
+    "tsx": "^4.19.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

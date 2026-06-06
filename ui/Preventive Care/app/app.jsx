@@ -41,8 +41,28 @@ function App() {
   // ---- Backend data loader ------------------------------------------
   // Triggered on mode changes and on explicit randomize. Updates
   // window.APP_DATA in place + bumps dataVersion so all children remount.
+  // Returns the loader result (or null) so callers can branch on success.
   async function runLoad(opts) {
+    // Default + initial live-blank resolve synchronously — skip the spinner so
+    // the user sees a clean state instantly. We still bump dataVersion so the
+    // children re-read window.APP_DATA.
+    const fast = opts && (opts.mode === "default" || (opts.mode === "live" && (!opts.patientInput || !opts.postcode)));
+    if (fast) {
+      let r;
+      try { r = await window.loadAppData(opts); } catch (e) { console.warn(e); return null; }
+      if (r && !r.stale) {
+        window.APP_DATA = r.appData;
+        setSeedId(r.seedId || "");
+        setDataVersion((v) => v + 1);
+        setApiState("ready");
+        setSourceBadge(sourceBadgeFor(r.source));
+      }
+      return r || null;
+    }
+
     setApiState("loading");
+    const MIN_SPINNER_MS = 550; // keep the animation visible even on fast cached responses
+    const t0 = performance.now();
     let result;
     try {
       result = await window.loadAppData(opts);
@@ -50,14 +70,20 @@ function App() {
       console.warn("[PreventPath] loader threw", e);
       setApiState("error");
       setSourceBadge({ label: "Unavailable", tone: "error" });
-      return;
+      return null;
     }
-    if (result.stale) return; // race-guarded out by the loader
+    if (result.stale) return null; // race-guarded out by the loader
+
+    const elapsed = performance.now() - t0;
+    if (elapsed < MIN_SPINNER_MS) {
+      await new Promise((res) => setTimeout(res, MIN_SPINNER_MS - elapsed));
+    }
     window.APP_DATA = result.appData;
     setSeedId(result.seedId || "");
     setDataVersion((v) => v + 1);
     setApiState("ready");
     setSourceBadge(sourceBadgeFor(result.source));
+    return result;
   }
 
   function sourceBadgeFor(src) {
@@ -80,7 +106,9 @@ function App() {
       setReportReady(false);
       setStage("connect");
       setPage("journey");
-      // Don't load yet — wait for live form submission.
+      // Swap to the empty Live shell — Connect tiles show "Not recorded"
+      // instead of letting the prior mode's data leak through.
+      runLoad({ mode: "live" });
     } else if (next === "demo") {
       setAuthed(false);
       setIngested(true);
@@ -108,9 +136,21 @@ function App() {
   }
 
   // Live form submit (called from Connect stage when user has filled the
-  // patient form and clicked "Generate report").
-  function submitLive(patientInput, postcode) {
-    runLoad({ mode: "live", patientInput, postcode });
+  // patient form and clicked "Generate report"). On success we mark the
+  // report ready and navigate to Stage 2 — the report sticks until the
+  // user reloads the mode or signs out.
+  async function submitLive(patientInput, postcode) {
+    setIngested(true);
+    const r = await runLoad({ mode: "live", patientInput, postcode });
+    if (!r) return; // race-guarded or threw — leave the user on Connect
+    const ok = r.source && r.source !== "live-blank" && r.source !== "safe_fallback" && r.source !== "stale";
+    if (ok) {
+      setReportReady(true);
+      setStage("report");
+      setPage("journey");
+      const m = document.querySelector(".main-scroll");
+      if (m) m.scrollTop = 0;
+    }
   }
 
   // ---- Initial load: stay on Default (synchronous; no network) -------
@@ -134,7 +174,22 @@ function App() {
   };
 
   const showStagebar = page === "journey" && !liveLocked;
-  const badgeToneClass = "src-badge src-badge--" + sourceBadge.tone;
+  const isLoading = apiState === "loading";
+  const badgeToneClass = "src-badge src-badge--" + (isLoading ? "loading" : sourceBadge.tone);
+
+  // Contextual text for the loading overlay.
+  let loadingTitle = "Loading…";
+  let loadingSub = "";
+  if (mode === "demo") {
+    loadingTitle = "Randomising patient";
+    loadingSub = "Picking a new demo profile and running it through the rules engine.";
+  } else if (mode === "live") {
+    loadingTitle = "Generating your report";
+    loadingSub = "Running the rules engine and personalising your safety card.";
+  } else {
+    loadingTitle = "Loading default profile";
+    loadingSub = "One moment…";
+  }
 
   return (
     <div className="app">
@@ -153,18 +208,21 @@ function App() {
 
         <div className="appbar-right">
           <div className="mode-seg" role="tablist" aria-label="Data mode">
-            <button className={"mode-opt" + (mode === "default" ? " mode-opt--on" : "")} onClick={() => setMode("default")} title="Static fallback (no network)">Default</button>
-            <button className={"mode-opt" + (mode === "demo" ? " mode-opt--on" : "")} onClick={() => setMode("demo")} title="Random patient + live backend">Demo</button>
+            <button className={"mode-opt" + (mode === "default" ? " mode-opt--on" : "")} onClick={() => setMode("default")} title="The pristine showcase demo — instant, no network calls.">Default</button>
+            <button className={"mode-opt" + (mode === "demo" ? " mode-opt--on" : "")} onClick={() => setMode("demo")} title="Randomised mock patient, but the backend runs for real.">Demo</button>
             {mode === "demo" && (
-              <button className="mode-randomize" onClick={randomize} title="Pick a new random patient" aria-label="Randomize patient">
+              <button className={"mode-randomize" + (isLoading ? " spin" : "")} onClick={randomize} disabled={isLoading} title="Pick a new random patient" aria-label="Randomise patient">
                 <Icon name="check" size={11} stroke={2.5} />
               </button>
             )}
-            <button className={"mode-opt" + (mode === "live" ? " mode-opt--on" : "")} onClick={() => setMode("live")}>
+            <button className={"mode-opt" + (mode === "live" ? " mode-opt--on" : "")} onClick={() => setMode("live")} title="Sign in and fill the form — your inputs hit the backend.">
               <span className={mode === "live" ? "live-dot" : ""} /> Live
             </button>
           </div>
-          <span className={badgeToneClass} title={`Data source: ${sourceBadge.label}`}>{sourceBadge.label}</span>
+          <span className={badgeToneClass} title={`Data source: ${isLoading ? "loading" : sourceBadge.label}`}>
+            {isLoading ? <span className="src-badge-dot" /> : null}
+            {isLoading ? "Loading" : sourceBadge.label}
+          </span>
           <span className="appbar-divider" />
           <button className={"user-chip" + (page === "profile" ? " user-chip--on" : "")} onClick={() => nav("profile")}>
             <span className="avatar-sm">{patient.initials}</span>
@@ -198,24 +256,37 @@ function App() {
       )}
 
       <div className="main-scroll">
-        <React.Fragment key={dataVersion}>
-          {liveLocked ? (
-            <Login app={app} />
-          ) : page === "resources" ? (
-            <Resources go={go} />
-          ) : page === "support" ? (
-            <Support />
-          ) : page === "profile" ? (
-            <Profile app={app} go={go} />
-          ) : (
-            <>
-              {stage === "connect" && <Connect app={app} go={go} />}
-              {stage === "report" && <Report app={app} go={go} />}
-              {stage === "local" && <LocalCare app={app} />}
-            </>
-          )}
-        </React.Fragment>
+        <div className={"pp-stage-wrap" + (isLoading ? " data-loading" : "")} aria-busy={isLoading}>
+          <React.Fragment key={dataVersion}>
+            {liveLocked ? (
+              <Login app={app} />
+            ) : page === "resources" ? (
+              <Resources go={go} />
+            ) : page === "support" ? (
+              <Support />
+            ) : page === "profile" ? (
+              <Profile app={app} go={go} />
+            ) : (
+              <>
+                {stage === "connect" && <Connect app={app} go={go} />}
+                {stage === "report" && <Report app={app} go={go} />}
+                {stage === "local" && <LocalCare app={app} />}
+              </>
+            )}
+          </React.Fragment>
+        </div>
       </div>
+
+      {isLoading && (
+        <div className="pp-loading-overlay" role="status" aria-live="polite">
+          <div className="pp-spinner" aria-hidden="true" />
+          <div className="pp-loading-text">
+            {loadingTitle}
+            <span className="pp-loading-dots" aria-hidden="true"><span /><span /><span /></span>
+          </div>
+          {loadingSub ? <div className="pp-loading-sub">{loadingSub}</div> : null}
+        </div>
+      )}
     </div>
   );
 }

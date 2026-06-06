@@ -494,6 +494,13 @@ window.PPFallback.STATIC_DATA = (function () {
     {
       id: "manual",
       label: "Enter manually",
+      desc: "Type in BP, cholesterol, BMI or waist yourself.",
+      icon: "check",
+      state: "available",
+    },
+    {
+      id: "manual",
+      label: "Enter manually",
       desc: "Type in measurements you already know.",
       icon: "edit",
       state: "available",
@@ -670,6 +677,93 @@ window.PPFallback.STATIC_DATA = (function () {
 // Initial sync render: UI must boot with valid APP_DATA before React mounts.
 window.APP_DATA = window.PPFallback.STATIC_DATA;
 
+/* ------------------------------------------------------------------ */
+/* Blank shell for Live mode (pre-submission)                          */
+/* ------------------------------------------------------------------ */
+/* Used when user is in Live mode but has not yet submitted to the
+   backend. Reuses educational/reference content (services, waitingTimes,
+   official NHS content, measurementDetail) from STATIC_DATA, but clears
+   anything that's patient-specific. Connect stage renders this so that
+   manually-entered measurements aren't joined onto a fictional patient's
+   values — i.e. "no autofill". */
+
+window.PPFallback.BLANK_DATA = (function () {
+  var S = window.PPFallback.STATIC_DATA;
+  var blankMeasurement = function (id, label, icon, color, unit, note, key) {
+    return {
+      id: id, label: label, icon: icon, color: color, unit: unit,
+      value: null, status: "missing", statusLabel: "Not recorded",
+      note: note, source: null, key: !!key, spark: [],
+    };
+  };
+  return {
+    patient: {
+      name: "You", initials: "Yo", age: null, sex: "—", ethnicity: "—",
+      postcode: "M13 9PL", livesInEngland: true,
+      // Map fallback so Connect's Leaflet doesn't crash before postcode lookup.
+      location: S.patient.location,
+      conditions: [], medications: [], lifestyle: {},
+    },
+    measurements: [
+      blankMeasurement("bp", "Blood Pressure", "heart", "#FF2D55", "mmHg", "Key input for any CVD risk estimate.", true),
+      blankMeasurement("cholesterol", "Cholesterol / HDL", "droplet", "#AF52DE", "mmol/L", "Total & HDL needed for the best CVD estimate (NICE).", true),
+      blankMeasurement("bmi", "Body Mass Index", "scale", "#5E5CE6", "kg/m²", "BMI helps frame general preventive advice.", true),
+      blankMeasurement("waist", "Waist", "ruler", "#FF9500", "cm", "Waist measurement complements BMI.", true),
+      blankMeasurement("hr", "Resting Heart Rate", "pulse", "#FF3B30", "bpm", "30-day average from a connected watch.", false),
+      blankMeasurement("steps", "Daily Activity", "activity", "#34C759", "steps/day", "30-day average · target 8,000.", true),
+    ],
+    measurementDetail: S.measurementDetail,
+    trends: S.trends,
+    healthCheck: {
+      status: "awaiting_data",
+      headline: "Add your measurements to check eligibility",
+      reason: "We need your age and any pre-existing conditions to apply the NHS Health Check rules.",
+      includes: S.healthCheck.includes,
+      cadence: S.healthCheck.cadence,
+      action: S.healthCheck.action,
+      source: S.healthCheck.source,
+      bookUrl: S.healthCheck.bookUrl,
+      criteria: [
+        { label: "Aged 40–74", met: "unknown", detail: "Tell us your age." },
+        { label: "No existing CVD diagnosis", met: "unknown", detail: "Add your medical history." },
+        { label: "Not already monitored for a related condition", met: "unknown", detail: "Add your medical history." },
+        { label: "No check in the last 5 years", met: "unknown", detail: "We can't see a previous check." },
+      ],
+    },
+    cvdRisk: {
+      state: "incomplete",
+      headline: "CVD risk can't be calculated yet",
+      body: "Add your blood pressure and cholesterol to begin. Your report will reflect only what you enter.",
+      knownFactors: [],
+      missingHighValue: ["Blood pressure", "Total cholesterol & HDL"],
+      unlocks: S.cvdRisk.unlocks,
+      readyHeadline: S.cvdRisk.readyHeadline,
+      readyBody: S.cvdRisk.readyBody,
+      safety: S.cvdRisk.safety,
+    },
+    profileChecklist: [
+      { label: "Blood pressure", done: false },
+      { label: "Cholesterol / HDL", done: false },
+      { label: "Body measurements (BMI, waist)", done: false },
+      { label: "Smoking & lifestyle", done: false },
+      { label: "Family & medical history", done: false },
+    ],
+    completeness: 0,
+    services: S.services,
+    waitingTimes: S.waitingTimes,
+    actions: [],
+    gpQuestions: [],
+    gpSummary: "",
+    content: S.content,
+    resources: S.resources,
+    support: S.support,
+    account: { plan: "Live mode", member: "Signed in", settings: S.account.settings },
+    provenance: S.provenance,
+    dataSources: S.dataSources,
+    _backend: { source: "live-blank", urgencyLevel: "routine", nextStep: null, card: null, factors: [], readiness: { total: 9, recorded: 0, protective: 0, unknown: 9, percent: 0 } },
+  };
+})();
+
 (function () {
   // Monotonic request token — older requests resolve to a stale-flag so the
   // caller can drop them. Prevents Demo→Default mid-load races.
@@ -681,6 +775,15 @@ window.APP_DATA = window.PPFallback.STATIC_DATA;
       source: "safe_fallback",
       dataQuality: { postcode: "cached", services: "cached", waitingTimes: "cached", officialContent: "cached", population: "synthetic" },
       reason: "static fixture",
+    };
+  }
+
+  function blankLive() {
+    return {
+      appData: window.PPFallback.BLANK_DATA,
+      source: "live-blank",
+      dataQuality: { postcode: "cached", services: "cached", waitingTimes: "cached", officialContent: "cached", population: "synthetic" },
+      seedId: "live-user",
     };
   }
 
@@ -713,6 +816,11 @@ window.APP_DATA = window.PPFallback.STATIC_DATA;
     } else if (mode === "live") {
       patientInput = opts.patientInput;
       postcode = opts.postcode;
+      // No data yet → load the empty Live shell instead of the static fixture.
+      // This prevents "auto-fill" from STATIC_DATA leaking into Connect tiles.
+      if (!patientInput || !postcode) {
+        return Object.assign(blankLive(), { token: token });
+      }
       // Synthesise a minimal seed for presentation dressing.
       seed = seed || {
         id: "live-user",
