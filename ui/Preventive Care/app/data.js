@@ -3,7 +3,8 @@
    Mirrors the public-data strategy: postcodes.io geography, NHS Health Check
    rules, cached service + waiting-time samples. No live calls in the prototype. */
 
-window.APP_DATA = (function () {
+window.PPFallback = window.PPFallback || {};
+window.PPFallback.STATIC_DATA = (function () {
   // ---- The pre-loaded demo patient -------------------------------------
   const patient = {
     name: "James Whitfield",
@@ -656,3 +657,133 @@ window.APP_DATA = (function () {
     dataSources,
   };
 })();
+
+/* ------------------------------------------------------------------ */
+/* Live data loader                                                    */
+/* ------------------------------------------------------------------ */
+/* loadAppData({mode, seed?, patientInput?, postcode?}) -> Promise.
+   - default: returns STATIC_DATA synchronously, no network.
+   - demo: pick (or use given) seed → call backend → compose APP_DATA.
+     On any backend error, fall back to STATIC_DATA with source="safe_fallback".
+   - live: caller passes patientInput + postcode → call backend → compose. */
+
+// Initial sync render: UI must boot with valid APP_DATA before React mounts.
+window.APP_DATA = window.PPFallback.STATIC_DATA;
+
+(function () {
+  // Monotonic request token — older requests resolve to a stale-flag so the
+  // caller can drop them. Prevents Demo→Default mid-load races.
+  var REQ = 0;
+
+  function safeFallback() {
+    return {
+      appData: window.PPFallback.STATIC_DATA,
+      source: "safe_fallback",
+      dataQuality: { postcode: "cached", services: "cached", waitingTimes: "cached", officialContent: "cached", population: "synthetic" },
+      reason: "static fixture",
+    };
+  }
+
+  async function loadAppData(opts) {
+    opts = opts || {};
+    var mode = opts.mode || "default";
+    var token = ++REQ;
+    var fallback = window.PPFallback.STATIC_DATA;
+
+    if (mode === "default") {
+      return {
+        appData: fallback,
+        source: "default",
+        dataQuality: { postcode: "cached", services: "cached", waitingTimes: "cached", officialContent: "cached", population: "synthetic" },
+        seedId: "james-whitfield",
+        token: token,
+      };
+    }
+
+    // demo mode: pick a seed (or use provided), call backend, compose.
+    // live mode: caller-provided patientInput, call backend, compose.
+    var seed = opts.seed;
+    var patientInput;
+    var postcode;
+
+    if (mode === "demo") {
+      seed = seed || window.PPSeeds.pickRandomSeed();
+      patientInput = window.PPSeeds.buildPatientInput(seed);
+      postcode = seed.presentation && seed.presentation.postcode;
+    } else if (mode === "live") {
+      patientInput = opts.patientInput;
+      postcode = opts.postcode;
+      // Synthesise a minimal seed for presentation dressing.
+      seed = seed || {
+        id: "live-user",
+        patient: patientInput,
+        presentation: opts.presentation || synthesisePresentation(patientInput, postcode),
+      };
+    } else {
+      return safeFallback();
+    }
+
+    if (!patientInput || !postcode) {
+      return safeFallback();
+    }
+
+    // Fire both calls in parallel.
+    var profileP = window.PPApi.fetchProfile({ patient: patientInput, postcode: postcode });
+    var contextP = window.PPApi.fetchContext(postcode, "demo");
+    var profileR, contextR;
+    try {
+      var results = await Promise.all([profileP, contextP]);
+      profileR = results[0]; contextR = results[1];
+    } catch (e) {
+      console.warn("[PreventPath] loadAppData backend failure", e);
+      return Object.assign(safeFallback(), { token: token });
+    }
+
+    // Race guard: if a newer request started, drop this one.
+    if (token !== REQ) {
+      return { appData: window.APP_DATA, source: "stale", dataQuality: {}, token: token, stale: true };
+    }
+
+    if (!profileR || !profileR.ok) {
+      console.warn("[PreventPath] /api/nhs/profile not ok:", profileR);
+      return Object.assign(safeFallback(), { token: token, profileError: profileR && profileR.error });
+    }
+    var profile = profileR.data;
+    var context = (contextR && contextR.ok) ? contextR.data : null;
+
+    var appData;
+    try {
+      appData = window.PPAdapt.composeAppData(seed, profile, context, fallback);
+    } catch (e) {
+      console.warn("[PreventPath] composeAppData failed", e);
+      return Object.assign(safeFallback(), { token: token });
+    }
+
+    return {
+      appData: appData,
+      source: profile.source || "live",
+      dataQuality: (context && context.dataQuality) || { services: "cached", waitingTimes: "cached", officialContent: "cached", population: "synthetic", postcode: contextR && contextR.ok ? "live" : "failed" },
+      seedId: seed && seed.id,
+      token: token,
+    };
+  }
+
+  function synthesisePresentation(patientInput, postcode) {
+    // Minimal presentation for a live form-driven user. UI components
+    // expect name/initials/sex/etc so we fill in benign placeholders.
+    return {
+      name: "You", initials: "Yo", sex: patientInput.sexAtBirth === "female" ? "Female" : (patientInput.sexAtBirth === "male" ? "Male" : "—"),
+      ethnicity: "—",
+      postcode: postcode,
+      location: null,
+      lifestyle: { smoking: patientInput.smokingStatus || "—", smokingFlag: patientInput.smokingStatus === "current" ? "raised" : "good" },
+      heartRate: { value: 72, unit: "bpm", status: "good", spark: window.PPSeeds.pulseSpark(72), source: "Self-reported" },
+      steps: { value: 6000, target: 8000, status: "raised", spark: [5500, 5800, 6200, 5900, 6100, 6000], trend: "flat" },
+      bmiSpark: patientInput.bmi != null ? window.PPSeeds.spark6(patientInput.bmi, "flat") : [],
+      waistSpark: patientInput.waistCircumferenceCm != null ? window.PPSeeds.spark6(patientInput.waistCircumferenceCm, "flat") : [],
+    };
+  }
+
+  window.loadAppData = loadAppData;
+})();
+
