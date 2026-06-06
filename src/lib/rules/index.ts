@@ -17,40 +17,157 @@
  * - AI layer: only explains structured results later
  */
 
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export type {
+  // Fundamental enums and primitives
+  SexAtBirth,
+  UrgencyLevel,
+  EligibilityStatus,
+  SourceLabel,
+  ScreeningType,
+
+  // Input types
+  PatientInput,
+  LocalContext,
+
+  // Output types - domain specific
+  UrgencyAssessment,
+  HealthCheckEligibility,
+  ScreeningMatch,
+  MissingMeasurement,
+  QriskReadiness,
+  Recommendation,
+  GPSummaryItem,
+  SafetyNotice,
+  AiGuardrails,
+  Source,
+
+  // Output types - aggregate
+  PreventiveAssessment,
+
+  // Legacy types (for backward compatibility during migration)
+  PreventiveCareResult,
+  PreventiveRoute,
+  RulesEngineInput,
+  SafetyValidation,
+
+  // Utility types
+  ValueOf,
+  DeepPartial,
+  DeepRequired,
+} from './types';
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+export {
+  AGE_THRESHOLDS,
+  SCREENING_INTERVALS,
+  CLINICAL_THRESHOLDS,
+  DATA_FRESHNESS,
+  PREREQUISITES,
+  SAFETY_CONSTRAINTS,
+  ROUTING_THRESHOLDS,
+  POSTCODE_REGIONS,
+  RULES_ENGINE_VERSION,
+  SAFETY_NOTICE,
+  AI_GUARDRAILS,
+  SOURCE_LABELS,
+  NHS_SOURCES,
+} from './constants';
+
+// ============================================================================
+// SAFETY AND URGENCY
+// ============================================================================
+
+export {
+  assessUrgency,
+  getUrgencyAction,
+  RED_FLAGS,
+} from './safetyRules';
+
+export {
+  validateInput,
+  validateOutput,
+  sanitizeOutput,
+  validateCompleteOutput,
+  requiresSafetyReview,
+  getSafetySummary,
+} from './safetyRules';
+
+// ============================================================================
+// RULE MODULES
+// ============================================================================
+
+export {
+  assessHealthCheckEligibility,
+  isEligibleForHealthCheck,
+  getHealthCheckEligibilityExplanation,
+} from './healthCheckEligibility';
+
+export {
+  assessQriskReadiness,
+  isQriskReady,
+  getQriskMissingData,
+} from './qriskReadiness';
+
+export {
+  findMissingMeasurements,
+  categorizeMissingMeasurements,
+  isMeasurementMissing,
+  isMeasurementStale,
+  getMeasurementPriority,
+} from './missingMeasurements';
+
+export {
+  assessScreeningEligibility,
+  getEligibleScreenings,
+  isEligibleForScreening,
+  getScreeningExplanation,
+} from './screeningEligibility';
+
+export {
+  buildRecommendations,
+  generateRecommendations,
+  getLifestyleRecommendations,
+  getRecommendationPriority,
+  formatRecommendation,
+} from './recommendations';
+
+export {
+  buildGpSummary,
+  generateGPSummary,
+  generateSummaryText,
+  formatSummaryItem,
+} from './gpSummary';
+
+export {
+  assessPreventiveRoute,
+  isRouteRecommended,
+  buildUrgentAssessment,
+  getRouteDescription,
+} from './assessPreventiveRoute';
+
+// ============================================================================
+// MAIN ENTRY POINT
+// ============================================================================
+
 import type {
   RulesEngineInput,
   RulesEngineOutput,
   PreventiveCareResult,
 } from './types';
 import { RULES_ENGINE_VERSION } from './constants';
-
-// Safety layer
-import {
-  validateInput,
-  validateOutput,
-  sanitizeOutput,
-  validateCompleteOutput,
-  getSafetySummary,
-} from './safetyRules';
-
-// Rule modules
+import { validateInput, validateOutput, sanitizeOutput, validateCompleteOutput, getSafetySummary } from './safetyRules';
 import { evaluateHealthCheckEligibility } from './healthCheckEligibility';
 import { evaluateQRiskReadiness } from './qriskReadiness';
-import {
-  evaluateScreeningEligibility,
-  getEligibleScreenings,
-} from './screeningEligibility';
-
-import {
-  identifyMissingMeasurements,
-  categorizeMissingMeasurements,
-} from './missingMeasurements';
-
-import {
-  generateRecommendations,
-  getLifestyleRecommendations,
-} from './recommendations';
-
+import { evaluateScreeningEligibility, getEligibleScreenings } from './screeningEligibility';
+import { identifyMissingMeasurements, categorizeMissingMeasurements } from './missingMeasurements';
+import { generateRecommendations, getLifestyleRecommendations } from './recommendations';
 import { generateGPSummary, generateSummaryText } from './gpSummary';
 import { assessPreventiveRoute } from './assessPreventiveRoute';
 
@@ -222,47 +339,3 @@ export function validateRulesEngineInput(input: RulesEngineInput) {
 export function getRulesEngineVersion(): string {
   return RULES_ENGINE_VERSION;
 }
-
-// Re-export types for external use
-export type {
-  RulesEngineInput,
-  RulesEngineOutput,
-  PreventiveCareResult,
-  EligibilityResult,
-  Recommendation,
-  GPSummaryItem,
-  PreventiveRoute,
-  SafetyValidation,
-  SafetyViolation,
-  PatientDemographics,
-  RiskFactors,
-  BloodPressureReading,
-  BloodTestResult,
-  Measurement,
-  ScreeningType,
-  UrgencyLevel,
-  EligibilityStatus,
-  RecommendationAction,
-};
-
-// Re-export constants for external use
-export {
-  AGE_THRESHOLDS,
-  SCREENING_INTERVALS,
-  CLINICAL_THRESHOLDS,
-  DATA_FRESHNESS,
-  PREREQUISITES,
-  SAFETY_CONSTRAINTS,
-  ROUTING_THRESHOLDS,
-  RULES_ENGINE_VERSION,
-} from './constants';
-
-// Re-export safety functions for external use
-export {
-  validateInput,
-  validateOutput,
-  sanitizeOutput,
-  validateCompleteOutput,
-  requiresSafetyReview,
-  getSafetySummary,
-} from './safetyRules';
