@@ -230,13 +230,28 @@ export interface ScreeningMatch {
 
 /**
  * Missing or out-of-date measurement
+ *
+ * This is a flexible structure to accommodate various formats.
+ * For prototype: uses key, label, whyItMatters, suggestedSource, priority.
  */
 export interface MissingMeasurement {
-  /** Type of measurement */
-  measurementType: ScreeningType;
+  /** Unique identifier for the measurement */
+  key?: string;
 
-  /** Whether this is critical for decision-making */
-  critical: boolean;
+  /** Human-readable label */
+  label?: string;
+
+  /** Why this measurement matters for preventive care */
+  whyItMatters?: string;
+
+  /** Suggested source for obtaining this measurement */
+  suggestedSource?: 'pharmacy' | 'nhs_health_check' | 'self_report' | 'gp_record';
+
+  /** Type of measurement (legacy field) */
+  measurementType?: ScreeningType;
+
+  /** Whether this is critical for decision-making (legacy field) */
+  critical?: boolean;
 
   /** Date of most recent measurement (if any) */
   lastMeasuredDate?: string;
@@ -244,11 +259,11 @@ export interface MissingMeasurement {
   /** How many months since last measurement */
   monthsSince?: number;
 
-  /** Recommended action */
-  recommendedAction: string;
+  /** Recommended action (legacy field) */
+  recommendedAction?: string;
 
   /** Priority level */
-  priority: 'high' | 'medium' | 'low';
+  priority?: 'high' | 'medium' | 'low';
 }
 
 /**

@@ -110,7 +110,7 @@ export function buildRecommendations(
   }
 
   // Rule 2: Missing blood pressure
-  if (missing.some(m => m.measurementType === 'blood_pressure')) {
+  if (missing.some(m => m.key === 'blood_pressure' || m.measurementType === 'blood_pressure')) {
     recommendations.push({
       id: generateId('blood_pressure', 'check'),
       title: 'Consider a blood pressure check',
@@ -122,7 +122,7 @@ export function buildRecommendations(
   }
 
   // Rule 3: Missing cholesterol/HDL ratio
-  if (missing.some(m => m.measurementType === 'cholesterol')) {
+  if (missing.some(m => m.key === 'cholesterol_hdl_ratio' || m.measurementType === 'cholesterol')) {
     recommendations.push({
       id: generateId('cholesterol', 'test'),
       title: 'Ask about cholesterol testing',

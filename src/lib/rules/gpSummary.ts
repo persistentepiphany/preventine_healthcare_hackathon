@@ -12,8 +12,8 @@ import type {
   PatientInput,
   HealthCheckEligibility,
   ScreeningMatch,
-  MissingMeasurement,
   LocalContext,
+  MissingMeasurement,
 } from './types';
 
 /**
@@ -76,13 +76,17 @@ export function buildGpSummary(
   // Missing measurements
   if (missing.length > 0) {
     const missingNames = missing.map(m => {
+      // Support both key (internal) and measurementType (external) for compatibility
+      const key = (m as any).key || m.measurementType;
       const names: Record<string, string> = {
         blood_pressure: 'blood pressure',
+        cholesterol_hdl_ratio: 'cholesterol',
         cholesterol: 'cholesterol',
-        hba1c: 'HbA1c',
-        bmi: 'BMI',
+        bmi_or_waist: 'BMI or waist measurement',
+        smoking_status: 'smoking status',
+        family_history: 'family history of heart or stroke conditions',
       };
-      return names[m.measurementType] || m.measurementType;
+      return names[key as string] || (m as any).label || key;
     }).join(', ');
     parts.push(`The following measurements may be missing or out of date: ${missingNames}.`);
   }
