@@ -67,7 +67,7 @@ export function assessHealthCheckEligibility(input: PatientInput): HealthCheckEl
     return {
       status: 'not_eligible',
       ageEligible: true,
-      explanation: `You may not be eligible for an NHS Health Check because you have reported ${exclusionsList}. The NHS Health Check is for people who do not already have these conditions. Speak with your GP or pharmacist about ongoing cardiovascular risk monitoring and prevention suitable for your situation.`,
+      explanation: `You may not be eligible for an NHS Health Check because you have reported ${exclusionsList}. The NHS Health Check is for people who do not already have these conditions. Speak with your GP or pharmacist about ongoing cardiovascular health monitoring and prevention suitable for your situation.`,
     };
   }
 
@@ -75,6 +75,6 @@ export function assessHealthCheckEligibility(input: PatientInput): HealthCheckEl
   return {
     status: 'possibly_eligible',
     ageEligible: true,
-    explanation: `You may be eligible for an NHS Health Check. Ask your GP practice, local authority, or pharmacy about accessing this service in your area. The NHS Health Check can help identify your risk of developing heart disease, stroke, kidney disease, type 2 diabetes, or certain types of dementia.`,
+    explanation: `This prototype suggests you may be eligible for an NHS Health Check. Consider asking your GP practice, local authority, or pharmacy about accessing this service in your area. The NHS Health Check provides information about cardiovascular health and prevention.`,
   };
 }

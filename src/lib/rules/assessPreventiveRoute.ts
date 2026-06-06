@@ -131,7 +131,7 @@ function buildUrgentAssessment(
       missingData: [],
       staleData: [],
       status: 'not_calculated',
-      explanation: 'QRISK assessment not performed. Routine cardiovascular risk assessment paused due to urgent or emergency symptoms.',
+      explanation: 'QRISK assessment not performed. Routine cardiovascular health discussion paused due to urgent or emergency symptoms.',
     },
     recommendations: [recommendation],
     gpSummary,

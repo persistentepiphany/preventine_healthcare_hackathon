@@ -104,7 +104,7 @@ export function buildRecommendations(
       title: 'Ask about an NHS Health Check',
       priority: 'high',
       serviceType: 'nhs_health_check',
-      message: 'You may be eligible for an NHS Health Check. This is a free health check-up for adults aged 40-74. Ask your GP practice about booking one.',
+      message: 'This prototype suggests you may be eligible for an NHS Health Check. This is a free health check-up for adults aged 40-74. Consider asking your GP practice about accessing this service.',
       target: 'patient',
     });
   }
@@ -113,10 +113,10 @@ export function buildRecommendations(
   if (missing.some(m => m.measurementType === 'blood_pressure')) {
     recommendations.push({
       id: generateId('blood_pressure', 'check'),
-      title: 'Get a blood pressure check',
+      title: 'Consider a blood pressure check',
       priority: 'high',
       serviceType: 'pharmacy',
-      message: 'Blood pressure readings may help with health planning. Many pharmacies offer free checks. Ask about getting a reading.',
+      message: 'Blood pressure readings may be helpful for preventive health discussions. Many pharmacies offer checks. Consider asking about getting a reading.',
       target: 'patient',
     });
   }
@@ -152,7 +152,7 @@ export function buildRecommendations(
     if (match.status === 'possibly_eligible') {
       const titles: Record<ScreeningType, string> = {
         health_check: 'Ask about NHS Health Check',
-        qrisk: 'Ask about cardiovascular risk assessment',
+        qrisk: 'Ask about cardiovascular health discussion',
         blood_pressure: 'Ask about blood pressure check',
         cholesterol: 'Ask about cholesterol test',
         hba1c: 'Ask about HbA1c test',
@@ -181,10 +181,10 @@ export function buildRecommendations(
   if (!qrisk.ready && qrisk.missingData.length > 0) {
     recommendations.push({
       id: generateId('qrisk', 'complete'),
-      title: 'Complete health information for risk assessment',
+      title: 'Complete health information for health discussion',
       priority: 'medium',
       serviceType: 'gp',
-      message: `Some information may be needed before any cardiovascular risk assessment can be considered: ${qrisk.missingData.join(', ')}. Discuss with your GP.`,
+      message: `Some information may be needed before any cardiovascular health discussion can be considered: ${qrisk.missingData.join(', ')}. Discuss with your GP.`,
       target: 'patient',
     });
   }

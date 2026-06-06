@@ -90,7 +90,7 @@ export function getUrgencyAction(level: UrgencyAssessment['level']): string {
     case 'routine':
       return 'Continue with routine preventive-care assessment.';
     case 'soon':
-      return 'Book an appointment with your GP soon.';
+      return 'Consider discussing with your GP soon.';
   }
 }
 

@@ -41,7 +41,7 @@ export function findMissingMeasurements(input: PatientInput): MissingMeasurement
     missing.push({
       key: 'blood_pressure',
       label: 'Blood pressure reading',
-      whyItMatters: 'Blood pressure is one of the key measurements used to assess heart health and stroke risk. Knowing your numbers helps you and your healthcare provider understand if any changes or monitoring is needed.',
+      whyItMatters: 'Blood pressure is one of the key measurements used in preventive health discussions. Knowing your numbers can be useful when speaking with a healthcare provider about general health.',
       suggestedSource: 'pharmacy',
       priority: 'high',
     });
