@@ -1,0 +1,25 @@
+{
+  "name": "preventive-healthcare",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "NHS preventive-care rendering layer (z.ai/GLM-5.1) — turns a deterministic PreventiveAssessment into safe patient-facing UI cards.",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "tsx scripts/smoke.ts",
+    "demo": "tsx scripts/demo.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
