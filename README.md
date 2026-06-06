@@ -1,279 +1,219 @@
-# Preventive Healthcare — NHS preventive-care navigator
+# Preventive Healthcare
 
-A hackathon project that takes a person's health profile, figures out the safe
-preventive-care next step, and renders it as patient-friendly text alongside
-real local NHS context (nearby services, area waiting times, population health
-indicators).
-
-The whole point is to bridge the gap between *"I have some health numbers
-and questions"* and *"here is the specific thing the NHS lets me do next, and
-here is where to do it"* — without overstepping, without inventing clinical
-claims, and without breaking when an upstream is flaky.
+**An NHS preventive-care navigator that turns "I have some numbers and questions" into "here is the specific thing you can do tomorrow, and here is where to do it." Built on `glm-5.1` (z.ai) as the patient-language layer over a deterministic clinical engine.**
 
 ---
 
-## What the app does
+## The problem
 
-Given a patient profile (age, country, condition flags, measurements, symptoms)
-and a postcode, the API returns:
+Preventive care in the NHS is genuinely good — free pharmacy BP checks for 40+, the NHS Health Check programme, ICB-funded screening, walk-in services — but **most people don't know any of it exists or what they qualify for.** They don't know whether their symptoms are urgent or not, what's worth telling a GP about, where the nearest pharmacy that does a BP check is, or how long they'll wait if they book one. They look at the NHS website and bounce off because the navigation is built for the system, not for them.
 
-1. **A short patient-facing card** — headline, body, next step — written in plain
-   English. *"You can get a free blood pressure check at most pharmacies in
-   England if you are 40 or over. An NHS Health Check may also be available."*
-2. **A 9-factor risk picture** — for each preventive-care factor (age, BP,
-   cholesterol, smoking, BMI/waist, CVD history, diabetes, hypertension,
-   kidney) we say whether it's `recorded` / `protective` / `unknown`, and a
-   readiness ring (e.g. *"7 of 9 factors known, 89% complete"*).
-3. **NHS Health Check eligibility** — possibly eligible, age-out-of-range, or
-   not eligible because of an existing condition.
-4. **QRISK3 readiness** — we never compute the score; we say what's missing to
-   compute it (e.g. *"need blood pressure and sex at birth"*).
-5. **Local NHS services** — real GP practices, pharmacies, and hospital sites
-   near the postcode, fetched live from the open NHS Spine Directory.
-6. **Local health context** — area-level public-health indicators (life
-   expectancy, smoking, obesity, activity, diabetes diagnosis rate) and the
-   most recent published per-ICB waiting-time figure for elective treatment.
-7. **Official NHS content links** — verified `nhs.uk` URLs for the conditions
-   relevant to the patient (NHS Health Check, pharmacy BP, etc.).
-8. **Honest data-quality badges** — every panel of the response carries a
-   status: `live`, `live-aggregate`, `cached`, `cached-fallback`, `synthetic`,
-   or `missing`. The UI shows users when something is real-time vs. stale vs.
-   illustrative.
+The other side of the problem: any tool that tries to fix this has to be **defensibly safe**. It can't invent diagnoses, fabricate risk percentages, recommend specific drugs, or personalise area-level data into a fake personal prediction. The minute it does, it stops being preventive care and starts being a liability.
+
+## The pitch
+
+A small API + UI that does both:
+1. **Answers the three questions every user is stuck on** — *what can I do, where do I go, how long will it take* — using real NHS data per postcode.
+2. **Does it safely** by splitting the clinical decision (a deterministic rules engine, no LLM) from the patient-language layer (`glm-5.1` z.ai, with hard guardrails). The engine decides; z.ai talks; a vocabulary cross-check in the test suite holds the seam together.
+
+The result is something that feels like a friendly NHS navigator while behaving like a regulated clinical tool.
+
+---
+
+## What a user gets back
+
+Submit a patient profile (age, country, condition flags, current measurements, red-flag symptoms) and a UK postcode. One round-trip to `POST /api/nhs/full?mode=light` returns:
+
+1. **A short patient-facing card** — headline + body + next step — written in plain English by z.ai:
+   > *"We need your blood pressure reading. You can get a free, walk-in check at most community pharmacies in England if you are 40 or over. An NHS Health Check may also be available."*
+   > → **Visit a local pharmacy for a free blood pressure check.**
+
+2. **A 9-factor risk picture** for the dashboard — every preventive-care factor (age, BP, cholesterol, smoking, BMI/waist, CVD history, diabetes, hypertension, kidney) labelled `recorded` / `protective` / `unknown`, plus a readiness ring ("7 of 9 known, 89% complete").
+
+3. **NHS Health Check eligibility** based on the 11-condition NHS exclusion list — *possibly eligible*, *age out of range*, *existing condition*, or *not applicable* (urgent override).
+
+4. **QRISK3 readiness** — *what's missing* to compute it. The system **never computes the score** unless every input is present, because making up a CVD risk percentage is the most common LLM-in-healthcare failure mode.
+
+5. **Real nearby NHS services** — GP practices, pharmacies, hospital/urgent-treatment-centre sites for that postcode, fetched live from the open NHS Spine Directory (ODS). No API key. Every UK postcode.
+
+6. **Real local waiting times** — the most recent per-ICB monthly percentage of patients seen within 18 weeks for elective treatment, from NHS England's RTT statistics. Hard-flagged `isPersonalPrediction: false`.
+
+7. **Real population health context** — 5 indicators per upper-tier local authority (life expectancy, smoking prevalence, overweight/obesity, physical activity, diabetes diagnosis rate) from Fingertips (PHE/OHID). Also keyless.
+
+8. **Verified NHS content links** — the specific `nhs.uk` pages that match the patient's situation (NHS Health Check, pharmacy BP, cholesterol, smoking, healthy weight).
+
+9. **Honest data-quality badges** — every panel carries `live`, `live-aggregate`, `cached`, `cached-fallback`, `synthetic`, or `missing` so the UI shows the user what's real-time vs illustrative.
 
 ---
 
 ## How it addresses preventive care
 
-The clinical core is a **deterministic rules engine** that classifies any
-patient into exactly one of four NHS-aligned preventive routes:
+The clinical core is a **deterministic rules engine** that classifies any patient into exactly one of four NHS-aligned preventive routes:
 
-| Route | When |
-|---|---|
-| **`urgent_care`** | Red-flag symptom present (chest pain, stroke symptoms, severe breathlessness). Beats everything else. Call 999 / NHS 111. |
-| **`pharmacy_bp_check`** | Adult ≥40 in England without hypertension, BP not checked in last 6 months. NHS funds free walk-in pharmacy BP checks for exactly this case. |
-| **`ask_gp_or_pharmacy_about_measurements`** | Any other missing routine measurement (cholesterol, BMI, smoking status). |
-| **`gp_review`** | All measurements present and no red flags — a routine GP review is the most defensible next step. |
+| Route | When | Why this route exists |
+|---|---|---|
+| **`urgent_care`** | Red-flag symptom (chest pain, stroke symptoms, severe breathlessness). Beats everything. | Call 999 / NHS 111. Health-check framing is suppressed. |
+| **`pharmacy_bp_check`** | Adult ≥40 in England, no hypertension, BP not checked in 6 months. | The NHS literally funds free walk-in pharmacy BP checks for exactly this case. |
+| **`ask_gp_or_pharmacy_about_measurements`** | Any other routine measurement missing (cholesterol, BMI, smoking status). | Most preventive care starts with getting the missing numbers in. |
+| **`gp_review`** | All measurements present, no red flags. | A routine GP review is the most defensible next step. |
 
-The engine is **purely deterministic** — no LLM is involved in the decision.
-Same patient input → same route, every time. The engine never invents a CVD
-risk percentage; until QRISK3 inputs are all present, the `risk_band` is
-`incomplete` and we say so.
+**The engine is purely deterministic** — no LLM in the decision path. Same input → same route, every time. It also outputs:
 
-On top of the routing, the system surfaces:
+- NHS Health Check eligibility (40–74 + the full 11-condition NHS exclusion list).
+- Missing-measurement detection so users know what to ask for.
+- Population screening matches (cervical, breast, colorectal, AAA, diabetic eye) when age/sex/condition criteria are met.
+- A 9-factor risk picture that reframes missing data as the next action, not a failure.
 
-- **NHS Health Check eligibility** (40–74, no excluding condition — uses the
-  full 11-condition NHS exclusion list).
-- **Missing-measurement detection** so the user knows what to ask for at the
-  pharmacy or GP.
-- **Population screening matches** (cervical, breast, colorectal, AAA,
-  diabetic eye) when age/sex/condition criteria are met.
-- **A 9-factor risk picture** for the dashboard — so users see what's already
-  known about them, what's protective, and what's a gap. This frames missing
-  data as an opportunity rather than a failure.
-
-The output is intentionally a **next-step**, not a diagnosis. The whole point
-is to nudge users toward the specific preventive action the NHS funds and
-they qualify for.
-
----
+The output is intentionally a **next-step, not a diagnosis** — nudging users to the specific preventive action the NHS funds and they qualify for.
 
 ## How it addresses NHS admin
 
-Most people don't know what they're eligible for, where to go, or how long
-it'll take. The system answers all three for any UK postcode:
+Three questions, real answers per UK postcode:
 
-- **"What can I do?"** → The card's `next_step` is one specific action ("Visit
-  a local pharmacy for a free blood pressure check") matched to the NHS
-  service that actually funds that action.
-- **"Where do I go?"** → Real nearby NHS services (GPs, pharmacies, hospital
-  sites) for the postcode, fetched live from the open NHS Spine Directory.
-  No login, no key, every UK postcode.
-- **"How long will it take?"** → Real per-ICB monthly waiting-time figures
-  from NHS England's RTT statistics (e.g. *"In your area (NHS Greater
-  Manchester ICB), 58.4% of patients are seen within 18 weeks"*). We label
-  this `live-aggregate` because it's real but monthly, not a personal
-  prediction — that distinction is hardcoded into the contract.
-- **"What's the reading material?"** → Verified NHS Health Check / pharmacy
-  BP / cholesterol / smoking / weight cards with `nhs.uk` URLs.
+- **What can I do?** → The card's `next_step` is one specific action ("Visit a local pharmacy for a free blood pressure check") matched to the NHS service that funds that action.
+- **Where do I go?** → 3–24 real NHS services per postcode from the open Spine Directory (ODS). No login, no key, every UK postcode including Scotland / Wales / Northern Ireland.
+- **How long will it take?** → Real per-ICB monthly RTT figures from NHS England (e.g. *"In your area (NHS Greater Manchester ICB), 58.4% of patients are seen within 18 weeks (NHS England, 2026-04)"*) — `live-aggregate`, hard-flagged as not a personal prediction.
 
-The single `POST /api/nhs/full` endpoint returns all of this in one round-trip
-so the UI can render a complete page from one fetch.
+Plus verified `nhs.uk` content links for whatever's relevant to the patient.
+
+`POST /api/nhs/full` returns all of it in one round-trip so the UI can render a complete page from a single fetch.
 
 ---
 
-## What role z.ai plays
+## What `glm-5.1` (z.ai) does
 
-z.ai (the GLM model family — we run on `glm-5.1`) is the **patient-language
-layer** of the whole app. Without it, the engine outputs would be a clean but
-inert set of enums (`next_step_type: "pharmacy_bp_check"`,
-`eligible_for_health_check: "possibly"`, `missing_measurements: ["blood
-pressure"]`). z.ai is what turns those enums into something a patient
-actually wants to read, click on, and ask follow-up questions about.
+z.ai is the **patient-language layer**. Without it the engine outputs are clean but inert (`next_step_type: "pharmacy_bp_check"`, `eligible_for_health_check: "possibly"`). z.ai is what turns those enums into something a person actually wants to read, click on, and follow up on.
 
-It runs across **five distinct generative surfaces**, each with its own
-prompt, schema, and safety net:
+It runs across **five distinct generative surfaces**, each with its own prompt, schema, and safety net:
 
-| Surface | What z.ai does |
+| Surface | What z.ai produces |
 |---|---|
-| **GP card** (`/api/nhs/gp-summary`) | Writes the headline + body + next-step in the patient's voice. *"We need your blood pressure reading. You can get a free, walk-in check at most community pharmacies in England if you are 40 or over. Visit a local pharmacy for a free blood pressure check."* |
-| **Tone toggle** (`/api/nhs/gp-summary?tone=simple\|detailed`) | Re-renders the same card at a different reading register — *simple* (shorter sentences, year-9 reading age) or *detailed* (one extra sentence of context per field). Same card, different voice. |
-| **Factor explain** (`/api/nhs/factor-explain`) | When a user clicks a chip on the risk picture ("why does my waist matter?"), z.ai writes a short plain-English explanation pinned to the patient's specific value — *not* a textbook definition, but a personalised "for someone with your numbers, here's what this factor changes." |
-| **Questions to ask** (`/api/nhs/questions-to-ask`) | Drafts 3–4 questions the patient can take into their next GP appointment, tailored to whatever's missing from their profile. ("What's a good way to track my blood pressure between checks?", "Should I be getting a cholesterol test now, or is it part of the Health Check?") |
-| **Unlock narration** (`/api/nhs/unlock-narration`) | When a measurement moves from missing → present (e.g. user adds a BP reading), z.ai narrates the change in one sentence: *"Now that your blood pressure is in, more of the picture is clear — your GP can talk this through with you."* It's the small moment of feedback that makes the dashboard feel alive. |
+| **GP card** (`/api/nhs/gp-summary`) | The headline + body + next-step in the patient's voice. *"We need your blood pressure reading. You can get a free, walk-in check at most community pharmacies in England if you are 40 or over."* |
+| **Tone toggle** (`/api/nhs/gp-summary?tone=simple\|detailed`) | The same card re-rendered at a different reading register — *simple* (shorter sentences, year-9 reading age) or *detailed* (one extra sentence of context per field). Same card, different voice. |
+| **Factor explain** (`/api/nhs/factor-explain`) | When a user taps a chip on the risk picture ("why does my waist matter?"), z.ai writes a short personalised explanation pinned to the patient's value — not a textbook definition, a "for someone with your numbers, here's what this changes." |
+| **Questions to ask** (`/api/nhs/questions-to-ask`) | 3–4 questions the patient can take into their next GP appointment, tailored to what's missing. *"Should I get a cholesterol test now, or is it part of the Health Check?"* |
+| **Unlock narration** (`/api/nhs/unlock-narration`) | When a measurement moves from missing → present, z.ai narrates the change in one sentence. *"Now that your blood pressure is in, more of the picture is clear — your GP can talk this through with you."* |
 
-These five surfaces are why the app feels like a product rather than a
-clinical decision tree. The engine knows *what* should happen next; z.ai
-makes it feel like the app *understands* what the user is going through and
-talks back to them like a person.
+These five surfaces are why the app feels like a product rather than a clinical decision tree. The engine knows *what* should happen next; z.ai makes the app *understand* what the user is going through and talk back like a person.
 
-### How each surface is wired
+### Why z.ai is allowed to be expressive
 
-Every z.ai call follows the same five-step pattern:
+It can be, because it never makes a clinical decision and never sees clinical data:
 
-1. **The deterministic rules engine runs first** and produces a
-   `PreventiveAssessment` — structured enums and strings only.
-2. **The renderer projects the engine's output into a chat prompt** — a
-   surface-specific system prompt + few-shots telling z.ai exactly what
-   shape JSON to produce (headline + body + next_step / explanation /
-   questions array / narration string / etc.) and the length / vocabulary
-   constraints.
-3. **z.ai returns JSON** matching that surface's schema.
-4. **Guardrails sweep the output** before it leaves the server:
-    - **Schema validation** — right keys, right types, within char limits.
-    - **Forbidden-token sweep** against a hand-authored list (`diagnos`,
-      `prescrib`, `%`, `hypertension`, `diabetes`, `heart attack`, `stroke`,
-      etc.). If z.ai tried to slip a claim in, the sweep catches it.
-    - **Urgent-text leak guard** (GP card only) — on the `urgent_care`
-      route, the card must not contain "preventive", "health check", or
-      "pharmacy". Second guardrail enforces this.
-5. **Safe-fallback if anything fails.** Each surface has its own
-   defensive fallback (the unlock narration falls back to *"More of the
-   picture is in. Bring this to your GP, who can talk it through with
-   you."*; questions falls back to three generic talking-points; the card
-   falls back to a defensive *"Worth a chat with your GP"*).
+- The engine projects every patient input into structured enums before z.ai sees anything. **z.ai is shown a `PreventiveAssessment` object — never the raw measurements.** It can't restate a BP number because it was never given one. It can't fabricate a CVD risk percentage because the engine emitted `risk_band: "incomplete"`, not a number.
+- Every output is **schema-validated** (right keys, right types, within char limits).
+- Every output is **forbidden-token-swept** against a hand-authored list — `diagnos`, `prescrib`, `%`, `hypertension`, `diabetes`, `heart attack`, `stroke`, etc. If z.ai sneaks a forbidden token in, the safe-fallback response is served.
+- Urgent-route cards are **swept a second time** for "preventive", "health check", or "pharmacy" — those must not appear when the patient has a red-flag symptom.
+- Every surface has its own **safe-fallback** payload — *"Worth a chat with your GP"* / *"More of the picture is in. Bring this to your GP."* — so if z.ai is down, slow, or misbehaves, the user still gets a useful response.
 
-### Why z.ai never makes a clinical decision (even though it generates a lot of text)
+### The seam that holds it together
 
-The hard separation is intentional. z.ai never sees the patient's actual
-measurements — it sees the *already-projected* enums and the engine's
-`forbidden_claims` list. It cannot restate a BP number because it was never
-shown one. It can't say "your cholesterol is high" because the engine
-emitted `eligible_for_health_check: "possibly"` and `missing_measurements:
-["cholesterol"]`, not the numeric value.
+The engine emits a `forbidden_claims: string[]` list (the claims the renderer is contractually barred from producing). The guardrails sweep against `FORBIDDEN_OUTPUT_TOKENS`. The test suite (`test/seam.test.ts`) asserts every engine-emitted claim is catchable by an existing token. **If the engine ever started forbidding a claim the guardrail couldn't catch, the build fails.** This cross-check is the load-bearing safety property of the whole project.
 
-The safety contract is enforced at test time: the engine's
-`forbidden_claims` list is cross-checked against the guardrail's token list
-in `test/seam.test.ts`. If the engine ever started emitting a claim the
-guardrails couldn't catch in rendered text, the build would fail. That
-cross-check is **the** load-bearing safety property of the app — the engine
-and the guardrails are tied at the hip, by tests, by design.
-
-So z.ai gets to be expressive, generative, and genuinely useful — five
-different surfaces, real personality, real warmth — without ever being
-allowed to drive the clinical part of the experience.
+z.ai gets to be expressive across five surfaces — real prose, real warmth, real personality — without ever being allowed to drive the clinical part of the experience.
 
 ---
 
-## Architecture in plain terms
+## Architecture (five clean layers)
 
-There are five layers, each one talking to the next through a frozen contract:
+**1. Contracts (`src/contracts/`)** — Zod-validated shapes for `PatientInput` and `LocalPreventiveContext`. Frozen across the project so every other layer relies on them.
 
-**1. Contracts (`src/contracts/`)** — Zod-validated shapes for `PatientInput`
-and `LocalPreventiveContext`. Frozen across the project so every other layer
-can rely on them.
+**2. Rules engine (`src/rules/`)** — Two deterministic engines side-by-side. The "flat seam" engine (`engine.ts`) emits exactly what the renderer expects; a "rich" engine (`src/lib/rules/`) carries QRISK readiness, screening matches, and prioritised recommendation cards. A safety bridge (`safety_bridge.ts`) projects the rich engine's output down to the flat seam so the rich signal can be surfaced without changing the renderer's contract.
 
-**2. Rules engine (`src/rules/`)** — Two deterministic engines. A "flat seam"
-engine (`engine.ts`) emits the renderer's contract; a "rich" engine
-(`src/lib/rules/`) carries extras like screening matches and QRISK
-readiness. A safety bridge (`safety_bridge.ts`) lets you run the rich engine
-and still get the flat seam shape the renderer expects.
+**3. Ingestion (`src/ingestion/`)** — One adapter per upstream, all with `Promise.allSettled` so one dead source can't sink the rest:
 
-**3. Ingestion (`src/ingestion/`)** — One adapter per upstream:
-- **postcodes.io** — postcode → location, ICB, admin district, lat/lng.
-- **NHS Spine Directory (ODS)** — open, no key. Real GP / pharmacy / NHS
-  trust site listings per outward postcode. Three role-keyed queries
-  memoized 24h.
-- **Fingertips (PHE/OHID)** — open, no key. Bulk-fetched once per day,
-  5 indicators per UTLA, hand-curated for patient-readability.
-- **RTT-by-ICB** — hand-curated `data/rttByIcb.json` covering 24 verified
-  English ICB codes with monthly % within 18 weeks.
-- **Official content** — cached, URL-verified.
-- An orchestrator (`context.ts`) fans out via `Promise.allSettled` so one
-  dead upstream can't sink the rest.
-
-**4. Rendering (`src/rendering/`)** — z.ai client + system prompts +
-few-shots + guardrails + safe fallback. Five rendered surfaces (GP card,
-tone variants, factor explain, questions, unlock narration), each with its
-own schema and safety sweep.
-
-**5. HTTP (`src/http/`)** — Tiny dep-free `node:http` server with CORS,
-per-request stderr logging, and a JSON router exposing:
-- `GET /api/nhs/postcode`
-- `GET /api/nhs/services`
-- `GET /api/nhs/waiting-times`
-- `GET /api/nhs/population`
-- `GET /api/nhs/context` *(orchestrated bundle)*
-- `POST /api/nhs/gp-summary` *(card with optional tone)*
-- `POST /api/nhs/factor-explain`
-- `POST /api/nhs/questions-to-ask`
-- `POST /api/nhs/unlock-narration`
-- `POST /api/nhs/profile` *(card + factors + readiness + QRISK + screening)*
-- `POST /api/nhs/full` *(context + profile in one round-trip — what the UI calls)*
-
----
-
-## Mode toggle: demo / light / full
-
-Every endpoint takes `?mode=demo|light|full` to select fidelity. Default is
-`demo` — the safest path for stage.
-
-| Source | demo | light | full |
+| Source | Key required? | Status | What we use |
 |---|---|---|---|
-| Postcode (postcodes.io) | live | live | live |
-| Services | cached pack | **NHS ODS live** (no key) | NHS Service Search (key) or cached-fallback |
+| postcodes.io | No | live | postcode → admin district, ICB, lat/lng, ONS codes |
+| **NHS Spine Directory (ODS)** | **No** | **live** | Real GP / pharmacy / NHS-trust-site listings per postcode |
+| **Fingertips (PHE/OHID)** | **No** | **live** | 5 public-health indicators per upper-tier local authority |
+| **RTT-by-ICB** | No | live-aggregate | Per-ICB monthly % within 18 weeks (24 verified codes) |
+| Official NHS content | No | cached, URL-verified | Health Check / pharmacy BP / cholesterol / etc. cards |
+| NHS Service Search | **Yes** (Apigee) | optional | Geo-distance-ranked services (mode=full only) |
+
+**4. Rendering (`src/rendering/`)** — z.ai client + system prompts + few-shots + guardrails + safe fallback. Five rendered surfaces (GP card, tone variants, factor explain, questions, unlock narration), each with its own schema and safety sweep.
+
+**5. HTTP (`src/http/`)** — Dep-free `node:http` server with CORS (default-permissive + `CORS_ORIGINS` allowlist mode), per-request stderr logging, and a JSON router. Endpoints:
+
+- `GET /api/nhs/postcode` — postcode lookup
+- `GET /api/nhs/services` — nearby services
+- `GET /api/nhs/waiting-times` — area waiting prose
+- `GET /api/nhs/population` — population indicators
+- `GET /api/nhs/context` — full orchestrated context bundle
+- `POST /api/nhs/gp-summary` — card with optional `tone`
+- `POST /api/nhs/factor-explain` — chip-click explanation
+- `POST /api/nhs/questions-to-ask` — GP appointment prep
+- `POST /api/nhs/unlock-narration` — measurement-came-in narration
+- `POST /api/nhs/profile` — card + 9 factors + readiness + QRISK + screening
+- **`POST /api/nhs/full`** — context + profile in one round-trip *(what the UI calls)*
+
+---
+
+## Mode toggle: `demo` / `light` / `full`
+
+Every endpoint takes `?mode=demo|light|full` to select fidelity. Default is `demo`.
+
+|  | demo (default) | light | full |
+|---|---|---|---|
+| Postcode | live | live | live |
+| Services | cached pack | **ODS live** (no key) | NHS Service Search (key) → else cached-fallback |
 | Waiting times | cached prose | **RTT-by-ICB live-aggregate** | RTT-by-ICB live-aggregate |
 | Population | synthetic | **Fingertips live** (5 indicators) | Fingertips live |
-| Official content | cached, URL-verified | cached, URL-verified | cached, URL-verified |
-| GP card render | uses M13 9PL cache | live z.ai | live z.ai |
+| Content | cached | cached | cached |
+| Card render | M13 9PL file cache | live z.ai | live z.ai |
 
-**`mode=light` is fully live with no API key required.** That was a real
-break-through — the open NHS Spine Directory ODS gives real GPs / pharmacies /
-hospitals nationwide, and Fingertips public-health data is also keyless.
+**`mode=light` is fully live with no API key required.** The unlock was finding that the NHS Spine Directory ODS is keyless and covers every UK postcode; Fingertips is also keyless. Combined with hand-curated RTT-by-ICB data, every English ICB gets fully-live per-area data with zero NHS onboarding.
 
-`mode=full` is wired to also try NHS Service Search via `NHS_API_KEY` in
-`.env`. Without the key, services degrade to `cached-fallback` (and a
-one-shot stderr warning explains why). The rest of `full` still goes live.
+`mode=full` adds NHS Service Search via `NHS_API_KEY` when set. Without it, services degrade cleanly to `cached-fallback` (the rest of `full` still goes live).
 
 ---
 
-## Safety properties (what we never do)
+## Safety properties (tested, not promised)
 
-These are tested in the seam suite — they don't drift.
+Every property is enforced by the test suite (`test/`), not by careful reading:
 
-- **Never invent a number.** No fabricated CVD risk %, no made-up waiting
-  time. If a number isn't sourced, it isn't in the output.
-- **Never personalise area waiting times.** The waiting-times shape carries
-  a hardcoded `isPersonalPrediction: false` and a disclaimer; the renderer
-  is contractually barred from saying "your wait will be X days".
-- **Never give a diagnosis.** The engine emits a `forbidden_claims` list
-  (e.g. *"you have hypertension"*, *"your CVD risk is X%"*); the guardrail
-  has a parallel token list (`hypertension`, `%`, etc.); if z.ai output
-  contains any forbidden token, the safe-fallback card is served instead.
-- **Urgent override beats preventive framing.** On `urgent_care` the card
-  must not mention "preventive", "health check", or "pharmacy"; a second
-  guardrail sweep enforces this.
-- **Honest data-quality badges.** Every adapter self-reports `live` /
-  `cached` / `synthetic` / `missing` / `cached-fallback`. The UI shows
-  these so judges and users can see what's real-time vs. illustrative.
-- **No deprivation claims.** The IMD (Index of Multiple Deprivation) value
-  is in postcodes.io's response but is deliberately *not* picked into our
-  shape — a single LSOA rank without national normalisation is too easy to
-  misuse in a patient card. The Fingertips deprivation indicator (93553) is
-  also intentionally excluded for the same reason.
+- **Never invent a number.** No fabricated CVD risk %, no made-up waiting time. If a number isn't sourced, it's not in the output.
+- **Never personalise area-level waiting times.** The waiting-times shape carries a hardcoded `isPersonalPrediction: false`; the renderer is contractually barred from saying "your wait will be X days".
+- **Never give a diagnosis.** The engine emits `forbidden_claims` (e.g. *"you have hypertension"*, *"your CVD risk is X%"*); the guardrail has a parallel token list; if z.ai's output contains a forbidden token, the safe-fallback card is served. The seam test cross-checks that every engine-forbidden claim is catchable by an existing guardrail token.
+- **Urgent override beats preventive framing.** On `urgent_care` the card must not mention "preventive", "health check", or "pharmacy". Second guardrail sweep enforces this.
+- **Honest data-quality badges.** Each adapter self-reports its real status; the UI shows users what's live vs cached vs synthetic vs missing.
+- **No deprivation claims.** The IMD value is in postcodes.io's response but is deliberately *not* field-picked. The Fingertips deprivation indicator (93553) is also excluded. A single deprivation rank without national normalisation is too easy to misuse in a patient card.
 
 ---
 
-## How to run
+## Live verification across 16 UK postcodes
+
+Probed live on 2026-06-06:
+
+| Postcode | Area | Services | Population | Waiting times |
+|---|---|---|---|---|
+| M13 9PL | Manchester | 21 live | live (Manchester) | 58.4% (Greater Manchester ICB) |
+| B1 1BB | Birmingham | 24 live | live | 56.2% (Birmingham & Solihull) |
+| LS1 4DT | Leeds | 24 live | live | 60.7% (West Yorkshire) |
+| L1 8JQ | Liverpool | 24 live | live | 56.9% (Cheshire & Merseyside) |
+| BS1 1AD | Bristol | 24 live | live | 62.4% (BNSSG) |
+| NE1 4ST | Newcastle | 24 live | live | 54.6% (NENC) |
+| PL1 2HJ | Plymouth | 24 live | live | 63.1% (Devon) |
+| BN1 1UB | Brighton | 24 live | live | 61.5% (Sussex) |
+| SW1A 1AA | Westminster | 3 live | live | 61.2% (NW London) |
+| E1 6AN | City of London | 24 live | live | 57.5% (NE London) |
+| N1 9GU | Islington | 24 live | live | 59.7% (NC London) |
+| NG1 5DT | Nottingham | 24 live | live | 58.6% (Notts) |
+| OX1 4AR | Oxford | 24 live | missing¹ | 64.2% (BOB) |
+| CB1 1NL | Cambridge | 24 live | missing¹ | 59.5% (Cambs & Peterborough) |
+| CF10 1EP | Cardiff (Wales) | 14 live | missing² | cached³ |
+| EH1 1YZ | Edinburgh (Scotland) | 3 live | missing² | cached³ |
+| BT1 5GS | Belfast (NI) | 3 live | missing² | cached³ |
+
+¹ Known ONS code-reissue gap (postcodes.io returns a code Fingertips doesn't index yet) — degrades to `missing`, not wrong-area.
+² Fingertips is England-only; devolved nations badge `missing`.
+³ Generic NHS-wide prose, not wrong-area Manchester data.
+
+`scripts/probe-live.ts` reruns this entire matrix and exits non-zero if any postcode × mode returns non-200.
+
+---
+
+## Running it
 
 ```bash
 # Install
@@ -282,13 +222,13 @@ npm install
 # Boot the API
 PORT=3000 npx tsx src/http/server.ts
 
-# Default demo (stage-safe, cached/synthetic)
+# Default demo (stage-safe, cached/synthetic — everything is fast)
 curl "http://localhost:3000/api/nhs/context?postcode=M13%209PL"
 
 # Light mode — fully live, no key
 curl "http://localhost:3000/api/nhs/context?postcode=M13%209PL&mode=light"
 
-# Full UI round-trip (light)
+# Full UI round-trip
 curl -X POST "http://localhost:3000/api/nhs/full?mode=light" \
   -H "content-type: application/json" \
   -d @sample-patient.json
@@ -296,11 +236,54 @@ curl -X POST "http://localhost:3000/api/nhs/full?mode=light" \
 # Cross-postcode × cross-mode smoke probe
 npx tsx scripts/probe-live.ts
 
-# Test suite
-npm test
+# Full test suite (247 tests, no live network needed)
+SEAM_STUB=1 npm test
 ```
 
-`source-verification.md` documents every upstream we probed, the date we
-probed it, what shape it returned, and what verdict (live-safe / cache-it /
-demo-only) we settled on. Re-probe before a stage demo with the commands in
-that file.
+`manual-tests.http` is set up for editor HTTP clients (VS Code REST Client, JetBrains HTTP) with worked examples for every endpoint and every mode.
+
+`source-verification.md` documents every upstream we probed, the date, what shape it returned, and the verdict — re-probe before stage with the commands in that file.
+
+---
+
+## What's in the repo
+
+```
+src/
+  contracts/          Zod-validated PatientInput, LocalPreventiveContext
+  rules/              Flat seam engine, rich engine bridge, factor projection
+  lib/rules/          Rich engine internals (QRISK readiness, screening matches)
+  ingestion/          Postcode, ODS services, Fingertips, RTT, content, orchestrator
+  rendering/          z.ai client + 5 renderers + guardrails + safe fallback
+  http/               Dep-free server + router with CORS + per-request log
+  storage/            In-memory session store for the UI
+
+data/
+  rttByIcb.json       24 verified English ICB codes + monthly RTT %
+  demoServices.json   Manchester fallback pack
+  ui-vocabulary.json  Engineer-authored NHS-sourced factor labels
+  officialContentCards.json   URL-verified nhs.uk content cards
+  cache/              File-cached cards for M13 9PL stage path
+
+test/                 247 tests, 16 files, seam test guards engine→guardrail vocabulary
+scripts/              probe-live.ts, demo-mock-profile.ts, demo-multi-profile.ts
+ui/                   Claude Design artifact (Preventive Care.html + jsx app)
+docs/                 UI integration guide + sample API response
+source-verification.md   What's live, what's cached, what we never trust
+```
+
+---
+
+## Tech stack
+
+- **Backend:** TypeScript + `node:http` (zero runtime dependencies in the server). Vitest. Zod for input contracts.
+- **LLM:** `glm-5.1` via the z.ai API. JSON-mode, temperature 0, hard char limits per surface.
+- **Live data:** postcodes.io, NHS Spine Directory (ODS), Fingertips (PHE/OHID), hand-curated RTT-by-ICB.
+- **Optional live data (key required):** NHS Service Search via Apigee — wired but gracefully degrades to cached-fallback without a key.
+- **Frontend:** Static HTML + JSX (Claude Design artifact in `ui/`), calls `POST /api/nhs/full` once per page render.
+
+---
+
+## One-line summary
+
+**A clinical engine that decides, an LLM that talks, and a guardrail layer that keeps them in their lanes — all running on real NHS data so the talking is grounded in what's actually in your area, what the NHS actually offers, and how long things actually take.**
