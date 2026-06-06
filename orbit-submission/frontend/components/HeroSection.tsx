@@ -79,7 +79,7 @@ export default function HeroSection() {
                 <circle cx="50" cy="95" r="4" fill="#005EB8" />
                 <circle cx="42" cy="102" r="3" fill="#005EB8" />
                 <circle cx="58" cy="102" r="3" fill="#005EB8" />
-                <text x="50" y="140" textAnchor="middle" fill="#94A3B8" fontSize="11" fontWeight="500">Tell basic info</text>
+                <text x="50" y="140" textAnchor="middle" fill="#E2E8F0" fontSize="13" fontWeight="500">Tell basic info</text>
               </g>
 
               {/* Arrow 1 */}
@@ -89,7 +89,7 @@ export default function HeroSection() {
               <g>
                 <circle cx="125" cy="100" r="24" fill="rgba(0, 169, 206, 0.1)" stroke="#00A9CE" strokeWidth="2" />
                 <path d="M115 95L123 103L135 91" stroke="#00A9CE" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                <text x="125" y="140" textAnchor="middle" fill="#94A3B8" fontSize="11" fontWeight="500">Safety check</text>
+                <text x="125" y="140" textAnchor="middle" fill="#E2E8F0" fontSize="13" fontWeight="500">Safety check</text>
               </g>
 
               {/* Arrow 2 */}
@@ -99,7 +99,7 @@ export default function HeroSection() {
               <g>
                 <circle cx="200" cy="100" r="24" fill="rgba(255, 176, 32, 0.1)" stroke="#FFB020" strokeWidth="2" />
                 <text x="200" y="106" textAnchor="middle" fill="#FFB020" fontSize="18" fontWeight="600">?</text>
-                <text x="200" y="140" textAnchor="middle" fill="#94A3B8" fontSize="11" fontWeight="500">What&apos;s missing</text>
+                <text x="200" y="140" textAnchor="middle" fill="#E2E8F0" fontSize="13" fontWeight="500">What&apos;s missing</text>
               </g>
 
               {/* Arrow 3 */}
@@ -109,7 +109,7 @@ export default function HeroSection() {
               <g>
                 <circle cx="275" cy="100" r="24" fill="rgba(0, 169, 206, 0.1)" stroke="#00A9CE" strokeWidth="2" />
                 <path d="M268 100L272 94L282 94L286 100L282 106L272 106Z" stroke="#00A9CE" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                <text x="275" y="140" textAnchor="middle" fill="#94A3B8" fontSize="11" fontWeight="500">Possible routes</text>
+                <text x="275" y="140" textAnchor="middle" fill="#E2E8F0" fontSize="13" fontWeight="500">Possible routes</text>
               </g>
 
               {/* Arrow 4 */}
@@ -121,7 +121,7 @@ export default function HeroSection() {
                 <rect x="338" y="90" width="24" height="18" rx="2" stroke="#00D4FF" strokeWidth="2" fill="none" />
                 <line x1="342" y1="96" x2="358" y2="96" stroke="#00D4FF" strokeWidth="1.5" />
                 <line x1="342" y1="102" x2="352" y2="102" stroke="#00D4FF" strokeWidth="1.5" />
-                <text x="350" y="140" textAnchor="middle" fill="#94A3B8" fontSize="11" fontWeight="500">Conversation</text>
+                <text x="350" y="140" textAnchor="middle" fill="#E2E8F0" fontSize="13" fontWeight="500">Conversation</text>
               </g>
             </svg>
           </MattePanel>
