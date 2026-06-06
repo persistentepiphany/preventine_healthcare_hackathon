@@ -685,6 +685,61 @@ a{color:inherit;text-decoration:none}
   margin-left:1px;transition:all .15s;
 }
 .mode-randomize:hover{background:var(--accent);color:#fff}
+
+/* ---------- Login form fields ---------- */
+.login-field-label{display:block;font-size:11.5px;font-weight:540;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);margin:14px 0 7px}
+.login-input{width:100%;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--panel2);border:1px solid var(--hair);border-radius:11px;padding:12px 14px;transition:border-color .15s,background .15s}
+.login-input:focus{outline:none;border-color:var(--accent);background:var(--panel3)}
+.login-error{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--attn);background:var(--attn-soft);border:1px solid rgba(204,139,94,.25);border-radius:9px;padding:9px 12px;margin-top:13px}
+.login-demo-creds{margin-top:20px;padding:14px 16px;background:var(--panel2);border:1px dashed var(--hair);border-radius:12px}
+.login-demo-creds-h{font-size:10.5px;font-weight:560;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:9px}
+.login-demo-creds-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2);padding:3px 0}
+.login-demo-creds-row code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--ink);background:var(--panel3);padding:3px 8px;border-radius:6px;border:1px solid var(--hair2)}
+.login-demo-fill{margin-top:10px;font-size:12px;font-weight:500;color:var(--accent-ink);background:transparent;border:none;cursor:pointer;padding:4px 0}
+.login-demo-fill:hover{text-decoration:underline}
+
+/* ---------- Connect: profile hero ---------- */
+.profile-strip{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+.profile-strip .avatar-xl{width:58px;height:58px;font-size:20px}
+.profile-strip-id{flex:1;min-width:0}
+.profile-strip-name{font-size:18px;font-weight:540;letter-spacing:-0.02em}
+.profile-strip-meta{font-size:13px;color:var(--ink2);margin-top:3px}
+.profile-strip-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.profile-strip .profile-tag{font-size:11px}
+.profile-edit{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:480;color:var(--ink2);background:var(--panel2);border:1px solid var(--hair);padding:8px 13px;border-radius:9px;cursor:pointer;transition:border-color .15s}
+.profile-edit:hover{border-color:var(--accent);color:var(--ink)}
+
+/* ---------- Postcode selector ---------- */
+.pc-form{display:flex;gap:8px;margin-top:14px}
+.pc-input{flex:1;font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--panel2);border:1px solid var(--hair);border-radius:9px;padding:9px 12px;text-transform:uppercase;letter-spacing:.04em}
+.pc-input:focus{outline:none;border-color:var(--accent)}
+.pc-btn{font-size:12.5px;font-weight:500;color:#fff;background:var(--accent);border:none;border-radius:9px;padding:0 14px;cursor:pointer;transition:opacity .15s}
+.pc-btn:hover{opacity:.92}
+.pc-btn[disabled]{opacity:.5;cursor:default}
+.pc-msg{font-size:12px;color:var(--ink3);margin-top:8px}
+.pc-msg--err{color:var(--high)}
+.pc-msg--ok{color:var(--good)}
+
+/* ---------- Manual entry inline form ---------- */
+.manual-form{margin-top:14px;padding:16px;background:var(--panel2);border:1px solid var(--hair);border-radius:13px;animation:revealRow .3s cubic-bezier(.22,1,.36,1)}
+.manual-form-h{display:flex;align-items:center;justify-content:space-between;font-size:13.5px;font-weight:520;margin-bottom:12px}
+.manual-form-close{font-size:18px;color:var(--ink3);background:none;border:none;cursor:pointer;line-height:1}
+.manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.manual-field{display:flex;flex-direction:column;gap:5px}
+.manual-field-label{font-size:11px;font-weight:520;letter-spacing:.03em;color:var(--ink3);text-transform:uppercase}
+.manual-field input{font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--panel3);border:1px solid var(--hair2);border-radius:8px;padding:8px 10px}
+.manual-field input:focus{outline:none;border-color:var(--accent)}
+.manual-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.manual-cancel{font-size:12.5px;color:var(--ink2);background:transparent;border:1px solid var(--hair);border-radius:9px;padding:8px 14px;cursor:pointer}
+.manual-save{font-size:12.5px;font-weight:500;color:#fff;background:var(--accent);border:none;border-radius:9px;padding:8px 16px;cursor:pointer}
+
+/* ---------- Uploaded records list ---------- */
+.records-list{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.record-row{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink2);background:var(--panel2);border:1px solid var(--hair2);border-radius:9px;padding:8px 12px}
+.record-row .record-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.record-row .record-meta{font-size:11px;color:var(--ink3)}
+.record-rm{font-size:14px;line-height:1;color:var(--ink3);background:none;border:none;cursor:pointer;padding:2px 6px}
+.record-rm:hover{color:var(--high)}
 </style>
 </head>
 <body>
