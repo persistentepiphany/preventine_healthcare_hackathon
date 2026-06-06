@@ -2,8 +2,25 @@ import { loadConfig, type RenderConfig } from "../config.js";
 import { SYSTEM_PROMPT } from "./system_prompt.js";
 import { FEW_SHOT_MESSAGES } from "./few_shot.js";
 
+export interface ZaiMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
 export interface ZaiClient {
+  /**
+   * GP-summary path. Hard-coded to SYSTEM_PROMPT + FEW_SHOT_MESSAGES — preserved
+   * so existing callers and existing test stubs do not break.
+   */
   complete(userJson: string): Promise<string>;
+
+  /**
+   * Generic chat path used by the additional surfaces (factor-explain,
+   * questions-to-ask, tone toggle, unlock-narration). Each caller supplies its
+   * own system prompt and optional few-shot examples — the post-LLM safety net
+   * lives in each renderer.
+   */
+  completeChat(messages: ZaiMessage[]): Promise<string>;
 }
 
 export class ZaiHttpClient implements ZaiClient {
@@ -14,12 +31,14 @@ export class ZaiHttpClient implements ZaiClient {
   }
 
   async complete(userJson: string): Promise<string> {
-    const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    return this.completeChat([
       { role: "system", content: SYSTEM_PROMPT },
       ...FEW_SHOT_MESSAGES,
       { role: "user", content: userJson },
-    ];
+    ]);
+  }
 
+  async completeChat(messages: ZaiMessage[]): Promise<string> {
     const res = await fetch(`${this.config.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {

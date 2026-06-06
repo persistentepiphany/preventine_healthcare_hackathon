@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "purpose": "Engineer-authored per-factor display text for the UI. NEVER include strings from the rules engine or rich engine here — the safety contract relies on UI free text coming from a vetted vocabulary, not from engine output. Same provenance model as data/officialContentCards.json.",
+    "updatedAt": "2026-06-06",
+    "sources": [
+      "https://www.nhs.uk/tests-and-treatments/nhs-health-check/",
+      "https://www.nhs.uk/conditions/high-blood-pressure-hypertension/",
+      "https://www.nhs.uk/conditions/high-cholesterol/",
+      "https://www.nhs.uk/live-well/quit-smoking/",
+      "https://www.nhs.uk/live-well/healthy-weight/",
+      "https://www.nice.org.uk/guidance/ng238"
+    ]
+  },
+  "factors": {
+    "age": {
+      "label": "Age",
+      "whyItMatters": "Age shapes which NHS preventive checks you're invited to. The NHS Health Check is offered every five years to adults aged 40 to 74 who don't already have certain long-term conditions.",
+      "nhsUrl": "https://www.nhs.uk/tests-and-treatments/nhs-health-check/"
+    },
+    "blood_pressure": {
+      "label": "Blood pressure",
+      "whyItMatters": "Blood pressure rarely has symptoms, so the only way to know is to get it checked. Many pharmacies in England offer free walk-in checks to anyone aged 40 or over.",
+      "nhsUrl": "https://www.nhs.uk/conditions/high-blood-pressure-hypertension/"
+    },
+    "cholesterol": {
+      "label": "Cholesterol",
+      "whyItMatters": "A simple blood test from a GP or pharmacy tells you your cholesterol numbers. Knowing them helps a preventive-care conversation be more useful.",
+      "nhsUrl": "https://www.nhs.uk/conditions/high-cholesterol/"
+    },
+    "smoking": {
+      "label": "Smoking status",
+      "whyItMatters": "Smoking status is a major preventive factor. Free NHS support to stop smoking is available through local services, GPs, and pharmacies.",
+      "nhsUrl": "https://www.nhs.uk/live-well/quit-smoking/"
+    },
+    "bmi_or_waist": {
+      "label": "BMI or waist size",
+      "whyItMatters": "Body measurements help frame general preventive advice. The NHS has free tools for working out your BMI and small everyday changes that add up.",
+      "nhsUrl": "https://www.nhs.uk/live-well/healthy-weight/"
+    },
+    "cvd_history": {
+      "label": "Heart and circulation history",
+      "whyItMatters": "If you've already been told you have cardiovascular disease, your care team manages this with you rather than the general NHS Health Check pathway.",
+      "nhsUrl": "https://www.nhs.uk/tests-and-treatments/nhs-health-check/"
+    },
+    "diabetes": {
+      "label": "Blood sugar",
+      "whyItMatters": "An existing blood-sugar condition is followed up through your GP rather than the general NHS Health Check. Your team monitors related checks routinely.",
+      "nhsUrl": "https://www.nhs.uk/tests-and-treatments/nhs-health-check/"
+    },
+    "hypertension": {
+      "label": "High blood pressure",
+      "whyItMatters": "If high blood pressure has already been picked up, your GP manages it directly — the general NHS Health Check route doesn't apply.",
+      "nhsUrl": "https://www.nhs.uk/conditions/high-blood-pressure-hypertension/"
+    },
+    "kidney_disease": {
+      "label": "Kidney health",
+      "whyItMatters": "Chronic kidney disease is followed up through your GP. Routine kidney health is part of the wider preventive picture for adults.",
+      "nhsUrl": "https://www.nhs.uk/tests-and-treatments/nhs-health-check/"
+    }
+  },
+  "statusLabels": {
+    "recorded": "You told us",
+    "protective": "Looks favourable",
+    "unknown": "Missing"
+  }
+}

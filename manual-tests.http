@@ -146,3 +146,462 @@ POST {{base}}/api/nhs/gp-summary
 content-type: application/json
 
 { "patient": { "age": "not a number" } }
+
+### -- GP SUMMARY TONE TOGGLE (z.ai re-renders at a different register) --------
+
+### Simple tone — shorter, plainer sentences. Cached on M13 9PL.
+POST {{base}}/api/nhs/gp-summary?live=1
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL",
+  "tone": "simple"
+}
+
+### Detailed tone — one extra sentence of context per field.
+POST {{base}}/api/nhs/gp-summary?live=1
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL",
+  "tone": "detailed"
+}
+
+### -- FACTOR EXPLAIN (z.ai expands one chip into a plain-English sentence) ----
+
+### Explain the waist factor for the demo patient. Cached on M13 9PL.
+POST {{base}}/api/nhs/factor-explain
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 102,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL",
+  "factorKey": "waistCircumferenceCm"
+}
+
+### Live explanation — bypasses cache, writes a fresh file for the demo postcode.
+POST {{base}}/api/nhs/factor-explain?live=1
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 102,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL",
+  "factorKey": "smokingStatus"
+}
+
+### Unknown factor key → 400 + availableFactors list (useful for the UI).
+POST {{base}}/api/nhs/factor-explain
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 102,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "factorKey": "notARealFactor"
+}
+
+### -- QUESTIONS TO ASK (z.ai generates 3–4 tailored GP questions) -------------
+
+### Cached questions for the demo patient.
+POST {{base}}/api/nhs/questions-to-ask
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL"
+}
+
+### Live questions — bypasses cache.
+POST {{base}}/api/nhs/questions-to-ask?live=1
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL"
+}
+
+### -- UNLOCK NARRATION (one-sentence "what changed" after filling a gap) ------
+
+### previouslyMissing=["blood pressure"] AND patient now has BP → narration via z.ai.
+POST {{base}}/api/nhs/unlock-narration?live=1
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": true,
+    "systolicBp": 122,
+    "diastolicBp": 78,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL",
+  "previouslyMissing": ["blood pressure", "cholesterol"]
+}
+
+### previouslyMissing matches the still-missing list → no-change, no z.ai call.
+POST {{base}}/api/nhs/unlock-narration
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL",
+  "previouslyMissing": ["blood pressure"]
+}
+
+### Invalid: previouslyMissing must be string[] → 400.
+POST {{base}}/api/nhs/unlock-narration
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "previouslyMissing": "not an array"
+}
+
+### -- MODE TOGGLE — demo / light / full (see src/ingestion/context.ts) ----------
+
+### demo (default) — all cached/synthetic, postcode-live only. Stage-safe (~<1s).
+GET {{base}}/api/nhs/context?postcode=M13%209PL
+
+### light — postcode + Fingertips population + RTT-by-ICB waiting times live.
+### First call is ~7-12s (Fingertips bulk fetch); subsequent calls are <100ms (24h memo).
+GET {{base}}/api/nhs/context?postcode=M13%209PL&mode=light
+
+### light for a non-Manchester postcode — Fingertips returns Westminster indicators,
+### RTT returns the per-ICB % for NHS North West London ICB.
+GET {{base}}/api/nhs/context?postcode=SW1A%201AA&mode=light
+
+### full — also tries NHS Service Search live. Without NHS_API_KEY in .env, services
+### degrade to dataQuality="cached-fallback".
+GET {{base}}/api/nhs/context?postcode=M13%209PL&mode=full
+
+### invalid postcode in light mode — every adapter degrades honestly.
+GET {{base}}/api/nhs/context?postcode=ZZ99%209ZZ&mode=light
+
+### -- AGGREGATE /api/nhs/full — one round-trip for the UI -----------------------
+
+### light mode aggregate. Returns { mode, context, profile } so the UI does one
+### fetch instead of orchestrating /api/nhs/context + /api/nhs/profile.
+POST {{base}}/api/nhs/full?mode=light
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": true,
+    "systolicBp": 122,
+    "diastolicBp": 78,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "M13 9PL"
+}
+
+### full mode aggregate — forces live z.ai render (?live=1 internally) AND
+### attempts live Service Search if NHS_API_KEY is set.
+POST {{base}}/api/nhs/full?mode=full
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": false,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  },
+  "postcode": "SW1A 1AA"
+}
+
+### Aggregate without a postcode — profile only, context omitted.
+POST {{base}}/api/nhs/full?mode=demo
+content-type: application/json
+
+{
+  "patient": {
+    "age": 52,
+    "livesInEngland": true,
+    "hasCvd": false,
+    "hasChronicKidneyDisease": false,
+    "hasDiabetes": false,
+    "hasHypertension": false,
+    "hasAtrialFibrillation": false,
+    "hasStrokeOrTia": false,
+    "hasFamilialHypercholesterolaemia": false,
+    "hasHeartFailure": false,
+    "hasPeripheralArterialDisease": false,
+    "onStatins": false,
+    "previousHighCvdRisk": false,
+    "bpCheckedLast6Months": true,
+    "systolicBp": 122,
+    "diastolicBp": 78,
+    "totalCholesterol": 4.8,
+    "hdlCholesterol": 1.2,
+    "bmi": 26,
+    "waistCircumferenceCm": 92,
+    "smokingStatus": "former",
+    "chestPain": false,
+    "strokeSymptoms": false,
+    "severeBreathlessness": false
+  }
+}

@@ -13,25 +13,49 @@
 
 /**
  * dataQuality badge state.
- *  - "live"      : fetched fresh from an upstream that we trust to return real data
- *                  (postcodes.io).
- *  - "cached"    : we have real data, but it's pinned in our demo pack rather than
- *                  freshly fetched — typically because the upstream is unreliable
- *                  (NHS DoHS sandbox) or unavailable (NHS Website Content API 503).
- *  - "synthetic" : we made it up. The data is illustrative, not sourced from any
- *                  real-world feed. The UI should badge this differently from
- *                  "cached" so users / judges aren't misled into thinking it's
- *                  pulled-and-pinned real data.
- *  - "missing"   : the source failed and we have nothing to show.
+ *  - "live"           : fetched fresh from an upstream that we trust to return real data
+ *                       (postcodes.io, Fingertips, NHS Service Search).
+ *  - "live-aggregate" : derived from a real but aggregate / non-real-time source
+ *                       (e.g. monthly per-ICB RTT statistics). Still real data,
+ *                       still not a personal prediction.
+ *  - "cached"         : we have real data, but it's pinned in our demo pack rather
+ *                       than freshly fetched — by design or because the upstream
+ *                       is canonically unreliable (NHS DoHS sandbox).
+ *  - "cached-fallback": we attempted a live fetch and it failed, so we returned the
+ *                       cached pack. UI should badge this differently from
+ *                       plain "cached" so the demo viewer sees a real signal that
+ *                       something tried-and-failed.
+ *  - "synthetic"      : we made it up. The data is illustrative, not sourced from
+ *                       any real-world feed. The UI should badge this differently
+ *                       from "cached" so users / judges aren't misled.
+ *  - "missing"        : the source failed and we have nothing to show.
  */
-export type DataQualityStatus = "live" | "cached" | "synthetic" | "missing";
+export type DataQualityStatus =
+  | "live"
+  | "live-aggregate"
+  | "cached"
+  | "cached-fallback"
+  | "synthetic"
+  | "missing";
 
 export interface LocalPreventiveContextLocation {
   /** From postcodes.io. Greater Manchester ICB, etc. */
   adminDistrict: string | null;
+  /**
+   * Upper-tier local authority ONS code (e.g. "E08000003" for Manchester).
+   * Used as the geographic key for Fingertips public-health indicators
+   * (`area_type_id=502`). Null when postcodes.io is unavailable or the
+   * postcode resolves to a non-UTLA-coded area.
+   */
+  adminDistrictCode: string | null;
   region: string | null;
   ccg: string | null;
   icb: string | null;
+  /**
+   * ONS code for the ICB (e.g. "E54000057" for NHS Greater Manchester ICB).
+   * Used to key the per-ICB RTT waiting-time lookup.
+   */
+  icbCode: string | null;
   lsoa: string | null;
   msoa: string | null;
   latitude: number | null;
@@ -67,15 +91,32 @@ export interface LocalPreventiveContextContentCard {
   summary: string;
 }
 
+export interface PopulationIndicator {
+  /** Fingertips indicator id (e.g. 22401 = NHS Health Check coverage). */
+  id: number;
+  /** Engineer-resolved human-readable name. */
+  name: string;
+  /** Most-recent value Fingertips returned for the area. Null when missing. */
+  value: number | null;
+  /** Fingertips year-range label (e.g. "2023/24"). */
+  year: string | null;
+  /** Engineer-supplied units (%, per 100,000, etc). */
+  unit: string;
+}
+
 export interface LocalPreventiveContextPopulation {
   /**
-   * Marked synthetic explicitly. Demo never sources live Fingertips indicator
-   * data this turn; if a future turn wires Fingertips, change this flag and the
-   * dataQuality.population badge accordingly.
+   * True if the data is illustrative (the synthetic pack). False once a live
+   * Fingertips fetch has populated `indicators`. The UI badges accordingly.
    */
-  isSynthetic: true;
+  isSynthetic: boolean;
   area: string;
   notes: string;
+  /**
+   * Present when live Fingertips data has been fetched for the area.
+   * Absent when the source is synthetic.
+   */
+  indicators?: PopulationIndicator[];
 }
 
 export interface LocalPreventiveContextDataQuality {
@@ -103,9 +144,11 @@ export interface LocalPreventiveContext {
 
 export const EMPTY_LOCATION: LocalPreventiveContextLocation = {
   adminDistrict: null,
+  adminDistrictCode: null,
   region: null,
   ccg: null,
   icb: null,
+  icbCode: null,
   lsoa: null,
   msoa: null,
   latitude: null,

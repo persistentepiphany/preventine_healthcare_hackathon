@@ -94,6 +94,9 @@ class WellBehavedClient implements ZaiClient {
       services,
     });
   }
+  async completeChat(): Promise<string> {
+    throw new Error("completeChat not used in this test");
+  }
 }
 
 const renderClient: ZaiClient = USE_LIVE

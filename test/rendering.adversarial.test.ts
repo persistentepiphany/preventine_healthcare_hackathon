@@ -53,11 +53,17 @@ class WellBehavedClient implements ZaiClient {
       services,
     });
   }
+  async completeChat(): Promise<string> {
+    throw new Error("completeChat not used in this test");
+  }
 }
 
 /** Stub that always throws — proves the LLM was never called. */
 class NeverCalledClient implements ZaiClient {
   async complete(): Promise<string> {
+    throw new Error("LLM should not have been called for this input");
+  }
+  async completeChat(): Promise<string> {
     throw new Error("LLM should not have been called for this input");
   }
 }
@@ -66,6 +72,9 @@ class NeverCalledClient implements ZaiClient {
 class MisbehavingClient implements ZaiClient {
   constructor(private readonly response: string) {}
   async complete(): Promise<string> {
+    return this.response;
+  }
+  async completeChat(): Promise<string> {
     return this.response;
   }
 }
@@ -177,6 +186,9 @@ describe("rendering — post-LLM safety net catches misbehaving models", () => {
     const card = await renderAssessment(validAssessment, {
       client: {
         complete: async () => {
+          throw new Error("upstream down");
+        },
+        completeChat: async () => {
           throw new Error("upstream down");
         },
       },
