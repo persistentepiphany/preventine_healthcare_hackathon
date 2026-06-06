@@ -172,12 +172,16 @@ src/lib/rules/
 ---
 
 ## Final Outputs
-*To be populated at session end*
 
-- [ ] Live demo URL
-- [ ] Screenshots
-- [ ] Team details
-- [ ] Submission package
+- [x] Submission package: `PreventPath-Orbit-Submission.zip` (220KB, 66 files)
+- [x] README.md: 264 lines with workflow summary, prompts, design decisions
+- [x] Source files: Rules engine + frontend components included
+- [x] Screenshots folder: Placeholder with instructions (screenshots to be added)
+- [ ] Live demo URL: [To be added]
+- [ ] Team details: [To be added]
+- [ ] GitHub repo: [To be added]
+- [ ] Devpost: [To be added]
+- [ ] Manus link: [To be added]
 
 ---
 
@@ -190,4 +194,5 @@ src/lib/rules/
 - Orbie embodied: Observation mode (respond only when summoned)
 
 ---
-*Last updated: 2026-06-06 20:40*
+*Last updated: 2026-06-06 20:42*
+*Orbie session completed. ZIP ready for submission.*
