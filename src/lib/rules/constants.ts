@@ -1,9 +1,11 @@
 /**
  * Constants for the PreventPath rules engine
  *
- * Contains age thresholds, screening intervals, and eligibility criteria.
+ * Contains age thresholds, screening intervals, eligibility criteria, and safety constants.
  * These values are configurable and should be reviewed against NHS guidelines.
  */
+
+import type { SourceLabel } from './types';
 
 /**
  * Age thresholds for preventive care services
@@ -326,3 +328,88 @@ export const POSTCODE_REGIONS = [
  * Rules engine version
  */
 export const RULES_ENGINE_VERSION = '1.0.0';
+
+/**
+ * Safety notice displayed to users
+ *
+ * This tool does not diagnose, prescribe, or choose treatment. It helps identify missing
+ * preventive-care information and prepare for an NHS Health Check, pharmacist visit, GP
+ * discussion, or urgent-care decision. If you think it is an emergency, call 999. If you need
+ * urgent medical help but are not sure what to do, use NHS 111.
+ */
+export const SAFETY_NOTICE =
+  'This tool does not diagnose, prescribe, or choose treatment. It helps identify missing preventive-care information and prepare for an NHS Health Check, pharmacist visit, GP discussion, or urgent-care decision. If you think it is an emergency, call 999. If you need urgent medical help but are not sure what to do, use NHS 111.';
+
+/**
+ * AI guardrails for the rules engine
+ *
+ * These guardrails constrain AI behavior to ensure safe, appropriate outputs
+ * that do not provide medical advice or diagnosis.
+ */
+export const AI_GUARDRAILS = [
+  'Do not diagnose the user with any condition.',
+  'Do not say the user definitely needs a test, referral, medication, or treatment.',
+  'Use cautious wording such as "may be eligible", "could discuss", and "consider asking".',
+  'Do not calculate or invent a cardiovascular risk score when required measurements are missing.',
+  'Do not minimise red-flag symptoms.',
+  'If red flags are present, prioritise NHS 111, 999, or urgent-care signposting over routine prevention advice.',
+  'Do not claim live NHS booking or appointment confirmation if the data is simulated.',
+] as const;
+
+/**
+ * Official NHS source labels and URLs
+ *
+ * References for data provenance and user-facing information.
+ */
+export const SOURCE_LABELS: Record<SourceLabel, { label: string; url: string }> = {
+  patient_reported: {
+    label: 'Patient reported',
+    url: 'https://www.nhs.uk/nhs-services/gps/how-to-access-your-gp-medical-records-online/',
+  },
+  gp_record: {
+    label: 'GP record',
+    url: 'https://www.nhs.uk/nhs-services/gps/how-to-access-your-gp-medical-records-online/',
+  },
+  hospital_record: {
+    label: 'Hospital record',
+    url: 'https://www.nhs.uk/nhs-services/hospitals/your-hospital-stay/your-medical-notes/',
+  },
+  screening_programme: {
+    label: 'Screening programme',
+    url: 'https://www.nhs.uk/conditions/nhs-screening/',
+  },
+  calculated: {
+    label: 'Calculated',
+    url: 'https://www.nhs.uk/nhs-services/gps/how-to-access-your-gp-medical-records-online/',
+  },
+  unknown: {
+    label: 'Unknown',
+    url: 'https://www.nhs.uk/',
+  },
+} as const;
+
+/**
+ * Additional official NHS source references
+ */
+export const NHS_SOURCES = {
+  HEALTH_CHECK: {
+    label: 'NHS Health Check',
+    url: 'https://www.nhs.uk/conditions/nhs-health-check/',
+  },
+  SCREENING: {
+    label: 'NHS Screening',
+    url: 'https://www.nhs.uk/conditions/nhs-screening/',
+  },
+  NHS_111: {
+    label: 'NHS 111 online',
+    url: 'https://111.nhs.uk/',
+  },
+  NHS_999: {
+    label: 'NHS 999 emergency',
+    url: 'https://www.nhs.uk/nhs-services/emergency-and-urgent-care-services/when-to-call-999/',
+  },
+  NICE_CVD: {
+    label: 'NICE Cardiovascular disease prevention',
+    url: 'https://www.nice.org.uk/guidance/ng136',
+  },
+} as const;
