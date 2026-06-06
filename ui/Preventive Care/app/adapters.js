@@ -389,32 +389,134 @@
     },
   };
 
-  function adaptServices(seed, context, fallback) {
-    // The backend's context.services only carries {name, type, address} —
-    // not enough to render tiles. We use the Manchester fallback as a
-    // template, then swap GP + hospital entries for region-appropriate ones
-    // when the seed lives elsewhere. Pharmacies stay because the framing
-    // ("walk in anywhere, no catchment") is true nationally.
+  // Pick order: (1) curated REGIONAL_OVERRIDES for the six cities we ship
+  // hand-written copy for; (2) live ODS services from /api/nhs/context (light
+  // mode) for any other postcode — gives real GP / pharmacy / hospital names
+  // pinned around the user's actual coords; (3) the Manchester fallback re-
+  // centred on the user's coords so the map at least doesn't snap home to
+  // Manchester. Pharmacies stay neutrally framed in all paths because the
+  // walk-in-anywhere framing is true nationally.
+
+  var ODS_TYPE_MAP = {
+    gp: "gp_practice",
+    pharmacy: "pharmacy",
+    hospital: "hospital",
+    urgent_treatment: "hospital",
+    other: "gp_practice",
+  };
+
+  function titleCaseName(s) {
+    return String(s || "")
+      .toLowerCase()
+      .replace(/\b([a-z])/g, function (_, c) { return c.toUpperCase(); })
+      .replace(/\bNhs\b/g, "NHS")
+      .replace(/\bCmht\b/g, "CMHT")
+      .replace(/\bA&e\b/gi, "A&E")
+      .replace(/\bCdc\b/g, "CDC")
+      .replace(/\bUk\b/g, "UK");
+  }
+
+  function jitterAround(lat0, lon0, idxInRing, ringRadiusKm) {
+    var angle = (((idxInRing * 137.5) + 23) % 360) * (Math.PI / 180);
+    var dLat = (ringRadiusKm / 111) * Math.cos(angle);
+    var dLon = (ringRadiusKm / (111 * Math.cos(lat0 * Math.PI / 180))) * Math.sin(angle);
+    return { lat: lat0 + dLat, lon: lon0 + dLon };
+  }
+
+  function pickTemplate(fallbackServices, uiType) {
+    for (var i = 0; i < fallbackServices.length; i++) {
+      if (fallbackServices[i].type === uiType) return fallbackServices[i];
+    }
+    return fallbackServices[0] || {};
+  }
+
+  function recentreServices(fbServices, lat0, lon0) {
+    if (!fbServices.length || !isFinite(lat0) || !isFinite(lon0)) return fbServices;
+    var anchor = fbServices.reduce(function (acc, s) {
+      if (!isFinite(s.lat)) return acc;
+      if (acc === null || (s.distanceKm < acc.distanceKm)) return s;
+      return acc;
+    }, null);
+    if (!anchor) return fbServices;
+    var dLat0 = lat0 - anchor.lat;
+    var dLon0 = lon0 - anchor.lon;
+    return fbServices.map(function (s) {
+      if (!isFinite(s.lat) || !isFinite(s.lon)) return s;
+      return Object.assign({}, s, { lat: s.lat + dLat0, lon: s.lon + dLon0 });
+    });
+  }
+
+  function adaptServicesFromOds(odsServices, fbServices, lat0, lon0) {
+    var grouped = { pharmacy: [], gp_practice: [], hospital: [] };
+    odsServices.forEach(function (s, i) {
+      var t = ODS_TYPE_MAP[s.type] || "gp_practice";
+      if (!grouped[t]) grouped[t] = [];
+      grouped[t].push(Object.assign({}, s, { _i: i }));
+    });
+    var picks = []
+      .concat(grouped.pharmacy.slice(0, 3))
+      .concat(grouped.gp_practice.slice(0, 3))
+      .concat(grouped.hospital.slice(0, 2));
+    if (!picks.length) return null;
+
+    return picks.map(function (s, idx) {
+      var uiType = ODS_TYPE_MAP[s.type] || "gp_practice";
+      var tpl = pickTemplate(fbServices, uiType);
+      var radius = uiType === "pharmacy"   ? 0.4 + (idx % 3) * 0.35
+                 : uiType === "gp_practice" ? 0.6 + (idx % 3) * 0.45
+                 :                             1.8 + (idx % 3) * 1.2;
+      radius = Math.round(radius * 10) / 10;
+      var c = jitterAround(lat0, lon0, s._i, radius);
+      return Object.assign({}, tpl, {
+        id: "live-" + uiType + "-" + idx,
+        name: titleCaseName(s.name),
+        type: uiType,
+        typeLabel: tpl.typeLabel || (uiType === "gp_practice" ? "GP Practice" : uiType === "pharmacy" ? "Pharmacy" : "Hospital"),
+        address: s.address || tpl.address || "—",
+        lat: c.lat,
+        lon: c.lon,
+        distanceKm: radius,
+      });
+    });
+  }
+
+  function adaptServices(seed, context, fallback, userLocation) {
     var fbServices = (fallback && fallback.services) || [];
     var locality = seed && seed.presentation && seed.presentation.location && seed.presentation.location.localAuthority;
-    if (!locality || !REGIONAL_OVERRIDES[locality]) return fbServices;
+    var lat0 = userLocation && Number(userLocation.latitude);
+    var lon0 = userLocation && Number(userLocation.longitude);
+    var haveCoords = isFinite(lat0) && isFinite(lon0);
 
-    var overrides = REGIONAL_OVERRIDES[locality];
-    var hospitals = (overrides.hospitals || []).slice();
-    var gps = (overrides.gps || []).slice();
+    // Path 1: curated regional overrides (hand-written richer copy).
+    if (locality && REGIONAL_OVERRIDES[locality]) {
+      var overrides = REGIONAL_OVERRIDES[locality];
+      var hospitals = (overrides.hospitals || []).slice();
+      var gps = (overrides.gps || []).slice();
+      return fbServices.map(function (svc) {
+        if (svc.type === "hospital" && hospitals.length) {
+          var h = hospitals.shift();
+          return Object.assign({}, svc, h, { id: svc.id + "-" + slug(h.name) });
+        }
+        if (svc.type === "gp_practice" && gps.length) {
+          var g = gps.shift();
+          return Object.assign({}, svc, g, { id: svc.id + "-" + slug(g.name) });
+        }
+        return svc;
+      });
+    }
 
-    return fbServices.map(function (svc) {
-      if (svc.type === "hospital" && hospitals.length) {
-        var h = hospitals.shift();
-        // New id so React keys don't collide across regions.
-        return Object.assign({}, svc, h, { id: svc.id + "-" + slug(h.name) });
-      }
-      if (svc.type === "gp_practice" && gps.length) {
-        var g = gps.shift();
-        return Object.assign({}, svc, g, { id: svc.id + "-" + slug(g.name) });
-      }
-      return svc;
-    });
+    // Path 2: live ODS data — works for any English postcode in light/full mode.
+    var ods = (context && Array.isArray(context.services)) ? context.services : [];
+    if (ods.length && haveCoords) {
+      var enriched = adaptServicesFromOds(ods, fbServices, lat0, lon0);
+      if (enriched) return enriched;
+    }
+
+    // Path 3: re-centre the Manchester fallback around the user's coords so
+    // pins at least cluster near the user. If we don't even have coords,
+    // ship the Manchester fixture verbatim.
+    if (haveCoords) return recentreServices(fbServices, lat0, lon0);
+    return fbServices;
   }
   function slug(s) {
     return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -422,15 +524,30 @@
 
   // -- waitingTimes ----------------------------------------------------
 
-  function adaptWaitingTimes(context, fallback) {
-    // Backend's waitingTimes is just {description, isPersonalPrediction,
-    // disclaimer}. The UI's panel expects rttStandard + records[]. Use
-    // fallback verbatim — backend's text we surface as a header note when
-    // present, otherwise the fallback disclaimer.
+  function adaptWaitingTimes(context, fallback, services) {
+    // Backend's waitingTimes carries {description, isPersonalPrediction,
+    // disclaimer}. In `light` mode for a known ICB, `description` becomes
+    // "In your area (NHS …), <pct>% of patients … within 18 weeks" — surface
+    // that as a header note. The numeric records[] table doesn't exist at the
+    // backend (no per-trust feed), so we keep the fallback's wait scaffolding
+    // but swap the provider names for the live hospitals in view so a York
+    // user doesn't see Manchester Royal Infirmary in the table.
     var fbWT = (fallback && fallback.waitingTimes) || {};
-    if (!context || !context.waitingTimes) return fbWT;
+    var liveDesc = context && context.waitingTimes && context.waitingTimes.description;
+    var liveDisc = context && context.waitingTimes && context.waitingTimes.disclaimer;
+
+    var fbRecords = Array.isArray(fbWT.records) ? fbWT.records : [];
+    var hospitals = (services || []).filter(function (s) { return s.type === "hospital"; });
+    var records = fbRecords.map(function (r, i) {
+      var swap = hospitals[i] || hospitals[hospitals.length - 1];
+      if (!swap || !swap.name) return r;
+      return Object.assign({}, r, { provider: swap.name });
+    });
+
     return Object.assign({}, fbWT, {
-      headerNote: context.waitingTimes.description || fbWT.disclaimer,
+      headerNote: liveDesc || fbWT.disclaimer,
+      disclaimer: liveDisc || fbWT.disclaimer,
+      records: records,
     });
   }
 
@@ -601,8 +718,14 @@
       cvdRisk: adaptCvdRisk(seed, profile, fallback),
       profileChecklist: checklist.profileChecklist,
       completeness: checklist.completeness,
-      services: adaptServices(seed, context, fallback),
-      waitingTimes: adaptWaitingTimes(context, fallback),
+      services: (function () {
+        var s = adaptServices(seed, context, fallback, location);
+        // Capture services into outer scope so adaptWaitingTimes can reuse
+        // them for provider-name swapping. Avoids re-computing the order.
+        composeAppData._lastServices = s;
+        return s;
+      })(),
+      waitingTimes: adaptWaitingTimes(context, fallback, composeAppData._lastServices),
       actions: adaptActions(seed, profile, fallback),
       gpQuestions: (fallback && fallback.gpQuestions) || [],
       gpSummary: buildGpSummary(seed, profile, fallback),

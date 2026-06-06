@@ -284,6 +284,11 @@ function LocalCare() {
         </button>
       </div>
       <section className="panel wait-card">
+        {waitingTimes.headerNote && (
+          <p className="wait-headernote">
+            <Icon name="info" size={13} stroke={1.8} /> {waitingTimes.headerNote}
+          </p>
+        )}
         <div className="wait-legend">
           <span className="wl-item"><span className="wl-swatch wl-first" /> First appointment</span>
           <span className="wl-item"><span className="wl-swatch wl-treat" /> Through to treatment</span>

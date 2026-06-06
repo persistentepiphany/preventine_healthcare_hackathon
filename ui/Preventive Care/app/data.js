@@ -839,7 +839,10 @@ window.PPFallback.BLANK_DATA = (function () {
 
     // Fire both calls in parallel.
     var profileP = window.PPApi.fetchProfile({ patient: patientInput, postcode: postcode });
-    var contextP = window.PPApi.fetchContext(postcode, "demo");
+    // "light" mode hits live ODS for services + per-ICB RTT waiting-time
+    // prose — so the Local Care page reflects the user's real postcode/ICB
+    // instead of the cached Manchester sample.
+    var contextP = window.PPApi.fetchContext(postcode, "light");
     var profileR, contextR;
     try {
       var results = await Promise.all([profileP, contextP]);
