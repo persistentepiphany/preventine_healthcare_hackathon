@@ -8,7 +8,13 @@ export type RiskBand = "incomplete" | "low" | "moderate" | "high";
 export type HealthCheckEligibility =
   | "possibly"
   | "not_age_eligible"
-  | "not_eligible_existing_condition";
+  | "not_eligible_existing_condition"
+  // Used by the engine on the urgent_care branch: NHS Health Check eligibility
+  // is irrelevant when the patient has a red-flag symptom. The renderer reads
+  // next_step_type === "urgent_care" as the dominant signal and ignores
+  // eligibility on that branch; this value just stops the data from lying
+  // (a 50yo with chest pain does not have "an existing condition").
+  | "not_applicable";
 
 export type NextStepType =
   | "ask_gp_or_pharmacy_about_measurements"
@@ -41,6 +47,7 @@ export const HEALTH_CHECK_ELIGIBILITY: readonly HealthCheckEligibility[] = [
   "possibly",
   "not_age_eligible",
   "not_eligible_existing_condition",
+  "not_applicable",
 ] as const;
 
 export const NEXT_STEP_TYPES: readonly NextStepType[] = [
