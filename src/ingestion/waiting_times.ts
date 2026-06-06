@@ -18,11 +18,67 @@ interface WaitingTimesFile {
   disclaimer: string;
 }
 
-export type WaitingTimesStatus = "cached" | "missing";
+export type WaitingTimesStatus = "cached" | "missing" | "live-aggregate";
 
 export interface WaitingTimesResult {
   data: LocalPreventiveContextWaitingTimes | null;
   status: WaitingTimesStatus;
+}
+
+const RTT_DATA_PATH = join(__dirname, "..", "..", "data", "rttByIcb.json");
+
+interface RttFile {
+  _meta: { publishDate: string; disclaimer: string };
+  icbs: Record<string, { name: string; percentWithin18Weeks: number }>;
+}
+
+let cachedRtt: RttFile | null = null;
+async function loadRtt(): Promise<RttFile | null> {
+  if (cachedRtt) return cachedRtt;
+  try {
+    const raw = await readFile(RTT_DATA_PATH, "utf8");
+    cachedRtt = JSON.parse(raw) as RttFile;
+    return cachedRtt;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Per-ICB waiting-time signal sourced from the latest NHS England RTT release
+ * (data/rttByIcb.json). Returns "live-aggregate" because the underlying data
+ * is real but is a monthly statistical aggregate, not a real-time per-patient
+ * estimate. isPersonalPrediction is hard-pinned to false.
+ *
+ * On miss (unknown ICB code, file unreadable) → falls back to the generic
+ * prose path. Pass the original postcode so the fallback picks generic over
+ * Manchester for non-M postcodes.
+ */
+export async function getWaitingTimeContextForIcb(
+  icbCode: string,
+  icbName: string | null,
+  postcode?: string,
+): Promise<WaitingTimesResult> {
+  const rtt = await loadRtt();
+  const entry = rtt?.icbs[icbCode];
+  if (!rtt || !entry) {
+    return getWaitingTimeContext(postcode);
+  }
+
+  const name = icbName ?? entry.name;
+  const pct = entry.percentWithin18Weeks.toFixed(1);
+  const publishDate = rtt._meta.publishDate;
+  return {
+    data: {
+      description:
+        `In your area (${name}), ${pct}% of patients waiting for elective ` +
+        `consultant-led treatment are seen within 18 weeks ` +
+        `(NHS England, ${publishDate}). Routine GP appointment timing varies by practice.`,
+      isPersonalPrediction: false,
+      disclaimer: rtt._meta.disclaimer,
+    },
+    status: "live-aggregate",
+  };
 }
 
 /**

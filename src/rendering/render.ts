@@ -2,7 +2,9 @@ import type { PreventiveAssessment } from "../rules/types.js";
 import { type CardJson, isCardJson } from "./card_schema.js";
 import { containsForbiddenToken, validateAssessment } from "./guardrails.js";
 import { SAFE_FALLBACK_CARD } from "./safe_fallback.js";
-import { ZaiHttpClient, type ZaiClient } from "./zai_client.js";
+import { SYSTEM_PROMPT } from "./system_prompt.js";
+import { FEW_SHOT_MESSAGES } from "./few_shot.js";
+import { ZaiHttpClient, type ZaiClient, type ZaiMessage } from "./zai_client.js";
 
 export interface RenderOptions {
   client?: ZaiClient;
@@ -32,6 +34,56 @@ export async function renderAssessment(
     return cloneCard(SAFE_FALLBACK_CARD);
   }
 
+  return applyCardGuardChain(raw, assessment);
+}
+
+/**
+ * Render a CardJson from a custom system prompt (with optional few-shot). Used
+ * by tone.ts to re-render the gp-summary card at a different register without
+ * duplicating the post-LLM guard chain.
+ *
+ * The guard chain is identical to renderAssessment's: schema validation,
+ * forbidden-token sweep, urgent-services strip, urgent-text leak guard.
+ */
+export async function renderCardFromMessages(
+  assessment: PreventiveAssessment,
+  systemPrompt: string,
+  fewShot: ZaiMessage[],
+  options: RenderOptions = {},
+): Promise<CardJson> {
+  // Caller is responsible for passing a validated assessment, but mirror the
+  // urgent-services strip for safety.
+  if (assessment.next_step_type === "urgent_care") {
+    if (assessment.local_services && assessment.local_services.length > 0) {
+      assessment.local_services = [];
+    }
+  }
+
+  const client = options.client ?? new ZaiHttpClient();
+
+  let raw: string;
+  try {
+    raw = await client.completeChat([
+      { role: "system", content: systemPrompt },
+      ...fewShot,
+      { role: "user", content: JSON.stringify(assessment) },
+    ]);
+  } catch {
+    return cloneCard(SAFE_FALLBACK_CARD);
+  }
+
+  return applyCardGuardChain(raw, assessment);
+}
+
+/** Re-exported so tone.ts can compose the default prompt + a tone clause. */
+export const DEFAULT_SYSTEM_PROMPT = SYSTEM_PROMPT;
+export const DEFAULT_FEW_SHOT: readonly ZaiMessage[] = FEW_SHOT_MESSAGES;
+
+/**
+ * Post-LLM guard chain: parse, schema-validate, forbidden-token sweep,
+ * urgent-only post-checks. Returns a safe fallback on any failure.
+ */
+function applyCardGuardChain(raw: string, assessment: PreventiveAssessment): CardJson {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);

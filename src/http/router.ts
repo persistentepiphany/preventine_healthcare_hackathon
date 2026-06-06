@@ -2,10 +2,16 @@ import { writeFile, readFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { fetchPostcode } from "../ingestion/postcode.js";
-import { fetchNearbyServices } from "../ingestion/services.js";
+import {
+  fetchNearbyServices,
+  fetchNearbyServicesViaODS,
+} from "../ingestion/services.js";
 import { getWaitingTimeContext } from "../ingestion/waiting_times.js";
 import { fetchPopulationContextSafe } from "../ingestion/population.js";
-import { getLocalPreventiveContext } from "../ingestion/context.js";
+import {
+  getLocalPreventiveContext,
+  type Mode,
+} from "../ingestion/context.js";
 import { assessPreventiveRoute } from "../rules/engine.js";
 import { parsePatientInput, type PatientInput } from "../contracts/patient_input.js";
 import { renderAssessment } from "../rendering/render.js";
@@ -35,6 +41,11 @@ import {
   type NarrationJson,
 } from "../rendering/unlock_narration.js";
 import { derivePatientFactors, findFactor } from "../lib/factor_chips.js";
+import {
+  getDefaultStore,
+  isValidSessionId,
+  type SessionData,
+} from "../storage/sessions.js";
 import type { ZaiClient } from "../rendering/zai_client.js";
 import type { CardJson } from "../rendering/card_schema.js";
 import type { LocalService, PreventiveAssessment } from "../rules/types.js";
@@ -70,6 +81,16 @@ function isDemoPostcode(postcode: string | undefined): boolean {
   return (
     postcode.trim().toUpperCase().replace(/\s+/g, " ") === DEMO_POSTCODE_CANONICAL
   );
+}
+
+/**
+ * Parse the `?mode=` query param. Unknown / missing → "demo" (the safe
+ * default). Only "demo", "light", "full" are accepted.
+ */
+function parseMode(query: URLSearchParams): Mode {
+  const raw = query.get("mode");
+  if (raw === "light" || raw === "full") return raw;
+  return "demo";
 }
 
 async function readCachedJson<T>(path: string): Promise<T | null> {
@@ -141,8 +162,9 @@ export async function getContext(query: URLSearchParams): Promise<RouterResponse
   if (!postcode || !postcode.trim()) {
     return { status: 400, body: { error: "missing postcode query param" } };
   }
-  const ctx = await getLocalPreventiveContext(postcode);
-  return { status: 200, body: ctx };
+  const mode = parseMode(query);
+  const ctx = await getLocalPreventiveContext(postcode, { mode });
+  return { status: 200, body: { ...ctx, mode } };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -152,10 +174,19 @@ export async function getContext(query: URLSearchParams): Promise<RouterResponse
 async function assessmentFor(
   patient: PatientInput,
   postcode: string | undefined,
+  mode: Mode = "demo",
 ): Promise<PreventiveAssessment> {
   let localServices: LocalService[] | undefined;
   if (postcode) {
-    const sv = await fetchNearbyServices(postcode);
+    // light + full both upgrade services to ODS-live (no key). full would
+    // also try Service Search via fetchNearbyServicesLive, but the
+    // gp-summary card only needs a name/type list — ODS gives that, and
+    // fetchNearbyServicesLive's extra geo precision isn't required to
+    // populate the card's local_services array.
+    const sv =
+      mode === "demo"
+        ? await fetchNearbyServices(postcode)
+        : await fetchNearbyServicesViaODS(postcode);
     localServices = sv.services.map((s) => ({ name: s.name, type: s.type }));
   }
   const optsArg = localServices !== undefined ? { localServices } : {};
@@ -198,14 +229,18 @@ export async function postGpSummary(
   }
 
   const tone: Tone | undefined = isTone(b.tone) ? b.tone : undefined;
+  const mode = parseMode(query);
   const useCache = query.get("live") !== "1";
-  const path = isDemoPostcode(b.postcode) ? cachePath(gpSummaryCacheFilename(tone)) : null;
+  const path =
+    isDemoPostcode(b.postcode) && mode === "demo"
+      ? cachePath(gpSummaryCacheFilename(tone))
+      : null;
   if (useCache && path) {
     const cached = await readCachedJson<CardJson>(path);
     if (cached) return { status: 200, body: { card: cached, source: "cache" } };
   }
 
-  const assessment = await assessmentFor(parsed.value, b.postcode);
+  const assessment = await assessmentFor(parsed.value, b.postcode, mode);
 
   const rendered = tone === undefined
     ? await renderAssessment(
@@ -583,8 +618,11 @@ export async function postProfile(
     return { status: 400, body: { error: "invalid patient", issues: parsed.issues } };
   }
 
+  const mode = parseMode(query);
+
   // 1. Flat engine drives the LLM card (existing safety path, unchanged).
-  const flatAssessment = await assessmentFor(parsed.value, b.postcode);
+  //    Pass mode so light/full uses ODS-live services for the card.
+  const flatAssessment = await assessmentFor(parsed.value, b.postcode, mode);
 
   // 2. Rich engine drives QRISK / screening / extra signal — pure data, never
   //    free text, so it can't bypass the LLM-output guardrails. Local services
@@ -597,8 +635,14 @@ export async function postProfile(
   const readiness = summariseReadiness(factorsRaw);
 
   // 4. Card path: cache → live → safe-fallback (in that order).
+  //    The M13 file cache only applies to demo mode — light/full want the
+  //    card to re-render so it can pick up the live ODS services / Fingertips
+  //    population that the cached card was rendered without.
   const useCache = query.get("live") !== "1";
-  const path = isDemoPostcode(b.postcode) ? cachePath("m13-9pl-card.json") : null;
+  const path =
+    isDemoPostcode(b.postcode) && mode === "demo"
+      ? cachePath("m13-9pl-card.json")
+      : null;
   let card: CardJson;
   let source: ProfileResponse["source"];
   if (useCache && path) {
@@ -662,6 +706,195 @@ export async function postProfile(
 }
 
 /* -------------------------------------------------------------------------- */
+/* POST /api/nhs/full — aggregate one-shot for the UI                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One-round-trip endpoint the UI calls. Returns the union of /api/nhs/context
+ * + /api/nhs/profile so the UI doesn't have to orchestrate. Respects the
+ * `?mode=` query param: passes it to the context fetch (which gates Fingertips /
+ * RTT / Service Search live calls) and uses it as a hint for the card path
+ * (`mode=full` is treated as `?live=1` semantics for the renderer; demo/light
+ * use the cached card when available).
+ *
+ * Postcode is optional. Without one, `context` is omitted and only the
+ * profile is returned.
+ */
+export interface FullRequestBody {
+  patient: unknown;
+  postcode?: string;
+}
+
+export async function postFull(
+  query: URLSearchParams,
+  body: unknown,
+  options: RouterOptions = {},
+): Promise<RouterResponse> {
+  if (typeof body !== "object" || body === null) {
+    return { status: 400, body: { error: "body must be a JSON object" } };
+  }
+  const b = body as Partial<FullRequestBody>;
+  const parsed = parsePatientInput(b.patient);
+  if (!parsed.ok) {
+    return { status: 400, body: { error: "invalid patient", issues: parsed.issues } };
+  }
+
+  const mode = parseMode(query);
+
+  // Profile path. In full mode we also force-bypass the card cache so the demo
+  // truly shows a fresh LLM render.
+  const profileQuery = new URLSearchParams(query);
+  if (mode === "full") profileQuery.set("live", "1");
+  const profileR = await postProfile(profileQuery, body, options);
+
+  // Context path — only if a postcode was supplied.
+  let context: unknown = null;
+  if (b.postcode && b.postcode.trim().length > 0) {
+    const ctxQuery = new URLSearchParams({ postcode: b.postcode, mode });
+    const ctxR = await getContext(ctxQuery);
+    if (ctxR.status === 200) context = ctxR.body;
+  }
+
+  return {
+    status: profileR.status,
+    body: {
+      mode,
+      context,
+      profile: profileR.body,
+    },
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* /api/nhs/session(/:id) — local file-backed draft storage                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Session endpoints let the UI persist a patient draft + previously-missing
+ * snapshot across page reloads and across LLM calls, without standing up a
+ * database. Backed by atomic JSON files under data/sessions/<uuid>.json
+ * (see src/storage/sessions.ts).
+ *
+ *   POST   /api/nhs/session             → create new session
+ *   GET    /api/nhs/session/:id         → read
+ *   PUT    /api/nhs/session/:id         → replace
+ *   PATCH  /api/nhs/session/:id         → shallow-merge update
+ *   DELETE /api/nhs/session/:id         → delete
+ *   GET    /api/nhs/session             → list (id + updatedAt only)
+ *
+ * Patient data is sensitive — the store is unencrypted on the demo machine
+ * and data/sessions/ is .gitignored. Do NOT point the UI at this with real
+ * patient information.
+ */
+
+const SESSION_PATH_RE = /^\/api\/nhs\/session(?:\/([^/]+))?\/?$/;
+
+/** Optional injected store override (for tests). Defaults to module store. */
+export interface SessionRouterOptions {
+  sessionStore?: ReturnType<typeof getDefaultStore>;
+}
+function storeFrom(options: RouterOptions & SessionRouterOptions): ReturnType<typeof getDefaultStore> {
+  return options.sessionStore ?? getDefaultStore();
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function badSessionId(): RouterResponse {
+  return { status: 400, body: { error: "invalid session id" } };
+}
+function notFound(): RouterResponse {
+  return { status: 404, body: { error: "session not found" } };
+}
+
+export async function postSession(
+  body: unknown,
+  options: RouterOptions & SessionRouterOptions = {},
+): Promise<RouterResponse> {
+  const store = storeFrom(options);
+  const seed: Partial<SessionData> = isPlainObject(body) ? readSessionSeed(body) : {};
+  const { id, data } = await store.create(seed);
+  return { status: 201, body: { id, ...data } };
+}
+
+function readSessionSeed(body: Record<string, unknown>): Partial<SessionData> {
+  const out: Partial<SessionData> = {};
+  if (isPlainObject(body.patient)) out.patient = body.patient as Partial<PatientInput>;
+  if (typeof body.postcode === "string") out.postcode = body.postcode;
+  if (Array.isArray(body.previouslyMissing)) {
+    out.previouslyMissing = body.previouslyMissing.filter((m) => typeof m === "string") as string[];
+  }
+  return out;
+}
+
+export async function getSession(
+  id: string,
+  options: RouterOptions & SessionRouterOptions = {},
+): Promise<RouterResponse> {
+  if (!isValidSessionId(id)) return badSessionId();
+  const store = storeFrom(options);
+  const data = await store.get(id);
+  if (!data) return notFound();
+  return { status: 200, body: { id, ...data } };
+}
+
+export async function putSession(
+  id: string,
+  body: unknown,
+  options: RouterOptions & SessionRouterOptions = {},
+): Promise<RouterResponse> {
+  if (!isValidSessionId(id)) return badSessionId();
+  if (!isPlainObject(body)) {
+    return { status: 400, body: { error: "body must be a JSON object" } };
+  }
+  const seed = readSessionSeed(body);
+  const store = storeFrom(options);
+  const next = await store.put(id, {
+    patient: seed.patient ?? {},
+    previouslyMissing: seed.previouslyMissing ?? [],
+    ...(seed.postcode !== undefined ? { postcode: seed.postcode } : {}),
+  });
+  if (!next) return notFound();
+  return { status: 200, body: { id, ...next } };
+}
+
+export async function patchSession(
+  id: string,
+  body: unknown,
+  options: RouterOptions & SessionRouterOptions = {},
+): Promise<RouterResponse> {
+  if (!isValidSessionId(id)) return badSessionId();
+  if (!isPlainObject(body)) {
+    return { status: 400, body: { error: "body must be a JSON object" } };
+  }
+  const seed = readSessionSeed(body);
+  const store = storeFrom(options);
+  const next = await store.patch(id, seed);
+  if (!next) return notFound();
+  return { status: 200, body: { id, ...next } };
+}
+
+export async function deleteSession(
+  id: string,
+  options: RouterOptions & SessionRouterOptions = {},
+): Promise<RouterResponse> {
+  if (!isValidSessionId(id)) return badSessionId();
+  const store = storeFrom(options);
+  const removed = await store.delete(id);
+  if (!removed) return notFound();
+  return { status: 200, body: { id, deleted: true } };
+}
+
+export async function listSessions(
+  options: RouterOptions & SessionRouterOptions = {},
+): Promise<RouterResponse> {
+  const store = storeFrom(options);
+  const items = await store.list();
+  return { status: 200, body: { sessions: items } };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Dispatcher                                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -670,7 +903,7 @@ export async function dispatch(
   pathname: string,
   query: URLSearchParams,
   body: unknown,
-  options: RouterOptions = {},
+  options: RouterOptions & SessionRouterOptions = {},
 ): Promise<RouterResponse> {
   if (method === "GET" && pathname === "/api/nhs/postcode") return getPostcode(query);
   if (method === "GET" && pathname === "/api/nhs/services") return getServices(query);
@@ -692,5 +925,25 @@ export async function dispatch(
   if (method === "POST" && pathname === "/api/nhs/profile") {
     return postProfile(query, body, options);
   }
+  if (method === "POST" && pathname === "/api/nhs/full") {
+    return postFull(query, body, options);
+  }
+
+  // /api/nhs/session(/:id) — collection and resource routes.
+  const sessionMatch = SESSION_PATH_RE.exec(pathname);
+  if (sessionMatch) {
+    const id = sessionMatch[1];
+    if (id === undefined) {
+      if (method === "POST") return postSession(body, options);
+      if (method === "GET") return listSessions(options);
+      return { status: 405, body: { error: "method not allowed" } };
+    }
+    if (method === "GET") return getSession(id, options);
+    if (method === "PUT") return putSession(id, body, options);
+    if (method === "PATCH") return patchSession(id, body, options);
+    if (method === "DELETE") return deleteSession(id, options);
+    return { status: 405, body: { error: "method not allowed" } };
+  }
+
   return { status: 404, body: { error: "not found" } };
 }

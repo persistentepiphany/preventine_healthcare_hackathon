@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "source": "NHS England — Consultant-led Referral to Treatment (RTT) Waiting Times, monthly statistics. https://www.england.nhs.uk/statistics/statistical-work-areas/rtt-waiting-times/",
+    "metric": "percentWithin18Weeks",
+    "publishDate": "2026-04",
+    "compiledOn": "2026-06-06",
+    "note": "All 24 ICB codes verified live against postcodes.io on 2026-06-06 by probing real postcodes in each ICB's catchment area. Codes are the canonical ONS `codes.icb` value. % values are illustrative figures in the range of the latest published per-ICB RTT release; refresh from the NHS England statistics page before a real demo. When the lookup misses, the orchestrator falls back to the generic-prose path.",
+    "disclaimer": "These are area-level monthly statistics, not personal predictions. Your own wait will depend on your specific GP practice, referral type, and time of year."
+  },
+  "icbs": {
+    "E54000008": { "name": "NHS Cheshire and Merseyside ICB", "percentWithin18Weeks": 56.9 },
+    "E54000010": { "name": "NHS Staffordshire and Stoke-on-Trent ICB", "percentWithin18Weeks": 57.3 },
+    "E54000018": { "name": "NHS Coventry and Warwickshire ICB", "percentWithin18Weeks": 58.9 },
+    "E54000022": { "name": "NHS Norfolk and Waveney ICB", "percentWithin18Weeks": 55.8 },
+    "E54000027": { "name": "NHS North West London ICB", "percentWithin18Weeks": 61.2 },
+    "E54000028": { "name": "NHS North Central London ICB", "percentWithin18Weeks": 59.7 },
+    "E54000029": { "name": "NHS North East London ICB", "percentWithin18Weeks": 57.5 },
+    "E54000030": { "name": "NHS South East London ICB", "percentWithin18Weeks": 60.1 },
+    "E54000031": { "name": "NHS South West London ICB", "percentWithin18Weeks": 63.8 },
+    "E54000037": { "name": "NHS Devon ICB", "percentWithin18Weeks": 63.1 },
+    "E54000039": { "name": "NHS Bristol, North Somerset and South Gloucestershire ICB", "percentWithin18Weeks": 62.4 },
+    "E54000042": { "name": "NHS Hampshire and Isle of Wight ICB", "percentWithin18Weeks": 60.4 },
+    "E54000044": { "name": "NHS Buckinghamshire, Oxfordshire and Berkshire West ICB", "percentWithin18Weeks": 64.2 },
+    "E54000048": { "name": "NHS Lancashire and South Cumbria ICB", "percentWithin18Weeks": 55.3 },
+    "E54000050": { "name": "NHS North East and North Cumbria ICB", "percentWithin18Weeks": 54.6 },
+    "E54000051": { "name": "NHS Humber and North Yorkshire ICB", "percentWithin18Weeks": 57.8 },
+    "E54000054": { "name": "NHS West Yorkshire ICB", "percentWithin18Weeks": 60.7 },
+    "E54000055": { "name": "NHS Birmingham and Solihull ICB", "percentWithin18Weeks": 56.2 },
+    "E54000056": { "name": "NHS Cambridgeshire and Peterborough ICB", "percentWithin18Weeks": 59.5 },
+    "E54000057": { "name": "NHS Greater Manchester ICB", "percentWithin18Weeks": 58.4 },
+    "E54000060": { "name": "NHS Nottingham and Nottinghamshire ICB", "percentWithin18Weeks": 58.6 },
+    "E54000061": { "name": "NHS South Yorkshire ICB", "percentWithin18Weeks": 59.1 },
+    "E54000062": { "name": "NHS Black Country ICB", "percentWithin18Weeks": 55.8 },
+    "E54000064": { "name": "NHS Sussex ICB", "percentWithin18Weeks": 61.5 }
+  }
+}

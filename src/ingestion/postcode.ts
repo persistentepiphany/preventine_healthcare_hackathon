@@ -58,6 +58,17 @@ interface PostcodesIoSuccessShape {
      * of fetchPostcode().
      */
     index_of_multiple_deprivation?: number | null;
+    /**
+     * ONS codes — the geographic keys we need for Fingertips (admin_district)
+     * and RTT-by-ICB (icb). Names like "Manchester" and "NHS Greater
+     * Manchester ICB" are useful for display, but the codes are what Fingertips
+     * and our RTT pack are keyed on.
+     */
+    codes?: {
+      admin_district?: string | null;
+      icb?: string | null;
+      [k: string]: unknown;
+    } | null;
     [k: string]: unknown;
   };
 }
@@ -103,11 +114,17 @@ export async function fetchPostcode(rawPostcode: string): Promise<PostcodeResult
   // easy to misuse in a patient-facing card ("you live in a deprived area") —
   // the project rule is no deprivation claims in any rendered text, so we cut
   // the data at the source. See source-verification.md (Corrections).
+  const codes = r.codes ?? {};
   return {
     ok: true,
     resolvedPostcode: typeof r.postcode === "string" ? r.postcode : normalised,
     location: {
       adminDistrict: typeof r.admin_district === "string" ? r.admin_district : null,
+      adminDistrictCode:
+        typeof codes.admin_district === "string" &&
+        !/^[A-Z]99999999$/.test(codes.admin_district)
+          ? codes.admin_district
+          : null,
       region: typeof r.region === "string" ? r.region : null,
       ccg: typeof r.ccg === "string" ? r.ccg : null,
       // postcodes.io has BOTH `icb` (ICB name) and `nhs_ha` (legacy NHS Health
@@ -118,6 +135,10 @@ export async function fetchPostcode(rawPostcode: string): Promise<PostcodeResult
           : typeof r.nhs_ha === "string"
             ? r.nhs_ha
             : null,
+      icbCode:
+        typeof codes.icb === "string" && !/^[A-Z]99999999$/.test(codes.icb)
+          ? codes.icb
+          : null,
       lsoa: typeof r.lsoa === "string" ? r.lsoa : null,
       msoa: typeof r.msoa === "string" ? r.msoa : null,
       latitude: typeof r.latitude === "number" ? r.latitude : null,
