@@ -1,0 +1,12 @@
+{
+  "_meta": {
+    "demoPostcode": "M13 9PL",
+    "compiledOn": "2026-06-06",
+    "note": "Pre-rendered demo card for M13 9PL — insurance against z.ai latency / outage / temp=0 wording drift on stage. The router serves this verbatim from /api/nhs/gp-summary when ?postcode=M13%209PL is supplied and ?live=1 is NOT. Drop ?live=1 on stage to use; add it for a true live render.",
+    "servicesPolicy": "Empty services[] because the demoServices.json pack intentionally ships no pre-vetted pharmacies (see that file's policy note). The body text still gives the patient the correct generic NHS framing for the pharmacy BP-check route."
+  },
+  "headline": "A quick check can complete the picture",
+  "body": "A free blood pressure check is available at most pharmacies in England if you're 40 or over — no appointment needed. Knowing your numbers will help complete your assessment, and you may also be eligible for a free NHS Health Check.",
+  "next_step": "Pop into a local pharmacy for a free blood pressure check.",
+  "services": []
+}

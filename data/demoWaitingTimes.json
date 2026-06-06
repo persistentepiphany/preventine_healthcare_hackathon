@@ -1,0 +1,11 @@
+{
+  "_meta": {
+    "demoPostcode": "M13 9PL",
+    "area": "Manchester",
+    "icb": "NHS Greater Manchester ICB",
+    "compiledOn": "2026-06-06",
+    "source": "Area-level NHS England elective-care signal (cached). Used for plain-English UI text only; NOT a personal prediction."
+  },
+  "description": "Across Greater Manchester, most patients booking a routine GP appointment are seen within two weeks. Same-day urgent slots are usually available; walk-in services are available at most community pharmacies for free blood-pressure checks.",
+  "disclaimer": "This is an area-level signal, not a personal prediction. Your own wait will depend on your GP practice, your reason for booking, and the time of year."
+}
