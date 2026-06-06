@@ -20,7 +20,7 @@ export function loadConfig(): RenderConfig {
     apiKey,
     baseUrl: readEnv("ZAI_BASE_URL") ?? "https://api.z.ai/api/paas/v4",
     model: readEnv("ZAI_MODEL") ?? "glm-5.1",
-    maxTokens: Number(readEnv("ZAI_MAX_TOKENS") ?? 400),
+    maxTokens: Number(readEnv("ZAI_MAX_TOKENS") ?? 4000),
     temperature: 0,
   };
 }
