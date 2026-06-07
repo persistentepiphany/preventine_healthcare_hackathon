@@ -939,8 +939,6 @@ export async function postUploadPatientInput(
     },
   };
 }
-  };
-}
 
 /* -------------------------------------------------------------------------- */
 /* Dispatcher                                                                 */

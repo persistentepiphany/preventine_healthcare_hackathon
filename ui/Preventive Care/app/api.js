@@ -91,6 +91,33 @@
     });
   }
 
+  function uploadPatientData(file) {
+    var formData = new FormData();
+    formData.append("file", file);
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 30000);
+    return fetch(API_BASE + "/api/upload/patient-input", {
+      method: "POST",
+      body: formData,
+      signal: controller.signal
+    }).then(function (res) {
+      clearTimeout(timer);
+      if (!res.ok) {
+        return res.json().then(function (body) {
+          return { ok: false, status: res.status, error: body.error, issues: body.issues };
+        }).catch(function () {
+          return { ok: false, status: res.status, error: "http " + res.status };
+        });
+      }
+      return res.json().then(function (body) {
+        return { ok: true, data: body.data, status: res.status };
+      });
+    }).catch(function (err) {
+      clearTimeout(timer);
+      return { ok: false, status: 0, error: err && err.name === "AbortError" ? "timeout" : "network" };
+    });
+  }
+
   function emptyPatientInput() {
     return {
       age: 0,
@@ -135,6 +162,7 @@
     fetchContext: fetchContext,
     fetchProfile: fetchProfile,
     fetchFull: fetchFull,
+    uploadPatientData: uploadPatientData,
     emptyPatientInput: emptyPatientInput,
     dataQualityBadge: dataQualityBadge,
   };

@@ -169,17 +169,9 @@ function Connect({ app, go }) {
 
     if (ext === 'json' || ext === 'txt' || ext === 'pdf') {
       try {
-        const formData = new FormData();
-        formData.append('file', file);
+        const result = await window.PPApi.uploadPatientData(file);
 
-        const response = await fetch(window.PPApi.base + '/api/upload/patient-input', {
-          method: 'POST',
-          body: formData
-        });
-
-        const result = await response.json();
-
-        if (result.ok && result.data) {
+        if (result.ok) {
           // Convert PatientInput to manual entry format
           const pi = result.data;
           const newManual = {};
@@ -229,10 +221,10 @@ function Connect({ app, go }) {
           setRecords(next);
           lsSet(PP_LS.records, next);
         } else {
-          alert('Invalid patient data file: ' + (result.error || 'unknown error'));
+          alert('Invalid patient data file: ' + (result.error || 'unknown error') + (result.issues ? '\n' + result.issues.map(i => i.path + ': ' + i.message).join('\n') : ''));
         }
       } catch (err) {
-        alert('Failed to upload file: ' + err.message);
+        alert('Failed to upload file: ' + (err && err.message || 'unknown error'));
       }
     } else {
       // Original behavior for other files
