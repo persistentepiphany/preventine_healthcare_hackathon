@@ -271,7 +271,7 @@ function LocalCare() {
           </div>
 
           <div className="md-actions">
-            <a className="md-btn" href={"tel:" + sel.phone.replace(/\s/g, "")}><Icon name="phone" size={14} stroke={1.8} /> {sel.phone}</a>
+            {sel.phone && <a className="md-btn" href={"tel:" + sel.phone.replace(/\s/g, "")}><Icon name="phone" size={14} stroke={1.8} /> {sel.phone}</a>}
             <button className="md-btn md-btn--ghost" onClick={() => { setDirLoading(true); setTimeout(() => setDirLoading(false), 1500); }} disabled={dirLoading}>
               {dirLoading ? <><span className="btn-spin btn-spin--dark" /> Plotting route…</> : <><Icon name="walk" size={14} stroke={1.8} /> Directions ({t.walk} walk)</>}
             </button>
