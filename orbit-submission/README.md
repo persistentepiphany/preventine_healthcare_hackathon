@@ -55,6 +55,12 @@ AI supported the PreventPath build across multiple areas, **but the clinical-fac
 
 **Clinical logic is deterministic** — pure TypeScript rules with no LLM inference for patient-facing decisions. Urgency assessment, missing measurements, and eligibility checks all run through deterministic functions with defined inputs and outputs.
 
+**GP Summary Rendering** uses **Z.ai GLM-5.1** with safety wrapper:
+- 12 adversarial cases tested (prompt injection, forbidden claims, urgent care)
+- 6/6 cases reaching model were clean unaided (100%)
+- 12/12 final safe with wrapper fallback (100%)
+- See `zai-smoke-results.md` for full test results
+
 ---
 
 ## Key Links
@@ -163,6 +169,7 @@ All user-facing copy adheres to:
 **Frontend**: Next.js 14 + TypeScript + Tailwind CSS  
 **UI Library**: Aceternity UI + Lucide React  
 **Rules Engine**: Pure TypeScript (14 modules)  
+**GP Summary Rendering**: Z.ai GLM-5.1 with safety wrapper  
 **Design System**: NHS cyan (#005EB8) + Linear-inspired dark theme
 
 ---
@@ -173,6 +180,8 @@ All user-facing copy adheres to:
 - `prompts-used.md` — Key prompts and agent tasks
 - `design-decisions.md` — Main product and safety decisions
 - `links.md` — Complete link list and team details
+- `zai-smoke-results.md` — GLM-5.1 adversarial test results (100% safe)
+- `zai_client.ts` — Z.ai GLM-5.1 integration
 
 ---
 
