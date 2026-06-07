@@ -489,7 +489,7 @@ window.PPFallback.STATIC_DATA = (function () {
     {
       id: "upload",
       label: "Upload a record",
-      desc: "Drop a PDF or photo of test results.",
+      desc: "Upload a PDF, image, or patient data file (JSON/TXT).",
       icon: "upload",
       state: "available",
     },
