@@ -46,8 +46,8 @@ export function assessUrgency(input: PatientInput): UrgencyAssessment {
     ? input.redFlags.filter(flag => typeof flag === 'string')
     : [];
 
-  const emergencyFlags = redFlags.filter(flag => EMERGENCY_RED_FLAGS.has(flag as never)) ?? [];
-  const urgentFlags = redFlags.filter(flag => URGENT_RED_FLAGS.has(flag as never)) ?? [];
+  const emergencyFlags = redFlags.filter(flag => EMERGENCY_RED_FLAGS.has(flag as never));
+  const urgentFlags = redFlags.filter(flag => URGENT_RED_FLAGS.has(flag as never));
 
   if (emergencyFlags.length > 0) {
     return {
