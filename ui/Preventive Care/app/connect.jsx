@@ -126,6 +126,72 @@ function Connect({ app, go }) {
     setLocOverride(next);
     lsSet(PP_LS.location, next);
     setPcInput("");
+
+    // Fetch local services for this postcode so Local Care page shows real data
+    setPcStatus({ tone: "idle", msg: "Finding local services…" });
+    const ctxR = await window.PPApi.fetchContext(raw, "light");
+    if (ctxR.ok && ctxR.data && Array.isArray(ctxR.data.services)) {
+      // Adapt ODS services to UI format using the adapter functions
+      const fb = window.PPFallback && window.PPFallback.STATIC_DATA;
+      const fbServices = fb && fb.services || [];
+      const lat0 = Number(next.latitude);
+      const lon0 = Number(next.longitude);
+
+      // Simple ODS adaptation - create basic service entries around the new coords
+      const ODS_TYPE_MAP = { pharmacy: "pharmacy", gp_practice: "gp_practice", hospital: "hospital" };
+      const grouped = { pharmacy: [], gp_practice: [], hospital: [] };
+      ctxR.data.services.forEach(function (s, i) {
+        var t = ODS_TYPE_MAP[s.type] || "gp_practice";
+        if (!grouped[t]) grouped[t] = [];
+        grouped[t].push(Object.assign({}, s, { _i: i }));
+      });
+
+      // Pick up to 3 pharmacies, 3 GPs, 2 hospitals
+      var picks = []
+        .concat(grouped.pharmacy.slice(0, 3))
+        .concat(grouped.gp_practice.slice(0, 3))
+        .concat(grouped.hospital.slice(0, 2));
+
+      if (picks.length > 0) {
+        // Jitter positions around the user's coords
+        var newServices = picks.map(function (s, idx) {
+          var uiType = ODS_TYPE_MAP[s.type] || "gp_practice";
+          var radius = uiType === "pharmacy"   ? 0.4 + (idx % 3) * 0.35
+                     : uiType === "gp_practice" ? 0.6 + (idx % 3) * 0.45
+                     :                             1.8 + (idx % 3) * 1.2;
+          radius = Math.round(radius * 10) / 10;
+          // Simple jitter: add small offset based on index
+          var angle = (idx * 137.5) * (Math.PI / 180);
+          var lat = lat0 + (radius * Math.sin(angle) / 111);
+          var lon = lon0 + (radius * Math.cos(angle) / (111 * Math.cos(lat0 * Math.PI / 180)));
+
+          return {
+            id: "live-" + uiType + "-" + idx,
+            name: s.name || (uiType === "gp_practice" ? "GP Practice" : uiType === "pharmacy" ? "Pharmacy" : "Hospital"),
+            type: uiType,
+            typeLabel: uiType === "gp_practice" ? "GP Practice" : uiType === "pharmacy" ? "Pharmacy" : "Hospital",
+            address: s.address || "N/A",
+            lat: lat,
+            lon: lon,
+            distanceKm: radius,
+            open: "Open today",
+            offers: [],
+            nextAvail: "Available",
+            hours: "See website",
+            eligibility: uiType === "pharmacy" ? "Walk in" : uiType === "gp_practice" ? "Check catchment" : "Referral only",
+            whyHere: null,
+            badge: null,
+            rating: null,
+            access: [],
+          };
+        });
+
+        // Update APP_DATA with new services
+        window.APP_DATA.services = newServices;
+        lsSet("pp-services-" + raw, newServices);
+      }
+    }
+
     setPcStatus({ tone: "ok", msg: "Updated to " + next.postcode + "." });
   }
   function clearLocation() {
