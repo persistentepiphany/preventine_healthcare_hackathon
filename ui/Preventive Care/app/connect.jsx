@@ -41,6 +41,7 @@ function Connect({ app, go }) {
   const [showManual, setShowManual] = useState(false);
   const [pcInput, setPcInput] = useState("");
   const [pcStatus, setPcStatus] = useState({ tone: "idle", msg: "" });
+  const [uploadError, setUploadError] = useState(null);
 
   const hasData = app.mode === "demo" || app.ingested;
 
@@ -227,13 +228,54 @@ function Connect({ app, go }) {
     if (fileInputRef.current) fileInputRef.current.click();
   }
   async function onFileChange(e) {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
+    // Reset any previous error
+    setUploadError(null);
 
-    // Handle patient data files (JSON, TXT, PDF)
+    const files = Array.from(e.target.files || []);
+    if (!files.length) {
+      // User cancelled file picker - silent, no error
+      e.target.value = "";
+      return;
+    }
+
     const file = files[0];
     const ext = file.name.toLowerCase().split('.').pop();
 
+    // Client-side validation before any API call
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+    const SUPPORTED_TYPES = ['pdf', 'json', 'txt', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'];
+
+    // Check file size
+    if (file.size > MAX_SIZE_BYTES) {
+      setUploadError({
+        title: "File too large",
+        message: "Please upload a file under 10MB."
+      });
+      e.target.value = "";
+      return;
+    }
+
+    // Check file is not empty
+    if (file.size === 0) {
+      setUploadError({
+        title: "Empty file",
+        message: "The file is empty. Please choose a file with content."
+      });
+      e.target.value = "";
+      return;
+    }
+
+    // Check file extension
+    if (!SUPPORTED_TYPES.includes(ext)) {
+      setUploadError({
+        title: "File type not supported",
+        message: "Please upload a PDF, image, or patient data file (JSON/TXT)."
+      });
+      e.target.value = "";
+      return;
+    }
+
+    // Handle patient data files (JSON, TXT, PDF) - requires backend parsing
     if (ext === 'json' || ext === 'txt' || ext === 'pdf') {
       try {
         const result = await window.PPApi.uploadPatientData(file);
@@ -288,13 +330,35 @@ function Connect({ app, go }) {
           setRecords(next);
           lsSet(PP_LS.records, next);
         } else {
-          alert('Invalid patient data file: ' + (result.error || 'unknown error') + (result.issues ? '\n' + result.issues.map(i => i.path + ': ' + i.message).join('\n') : ''));
+          // Parse backend error and show inline message
+          let errorMessage = "Could not process file. Please try again.";
+          if (result.error === 'not found') {
+            errorMessage = "Could not connect to the server. Please check your connection and try again.";
+          } else if (result.error === 'timeout') {
+            errorMessage = "Upload timed out. Please check your connection and try again.";
+          } else if (result.error === 'network') {
+            errorMessage = "Network error. Please check your connection and try again.";
+          } else if (result.error === 'invalid_format' || result.error === 'validation_failed' || result.error === 'pdf_parse_failed') {
+            errorMessage = "Could not read patient data. Please check the file format and try again.";
+            if (result.issues && result.issues.length) {
+              const issueText = result.issues.slice(0, 3).map(i => i.message).join(', ');
+              if (issueText) errorMessage += ` (${issueText})`;
+            }
+          }
+
+          setUploadError({
+            title: "Upload failed",
+            message: errorMessage
+          });
         }
       } catch (err) {
-        alert('Failed to upload file: ' + (err && err.message || 'unknown error'));
+        setUploadError({
+          title: "Upload failed",
+          message: "Could not upload file. Please try again."
+        });
       }
     } else {
-      // Original behavior for other files
+      // For image files, add directly to records (no backend parsing needed)
       const added = files.map((f) => ({
         id: Date.now() + "-" + f.name,
         name: f.name,
@@ -307,6 +371,8 @@ function Connect({ app, go }) {
       lsSet(PP_LS.records, next);
       app.markIngested();
     }
+
+    // Always reset file input so same file can be selected again
     e.target.value = "";
   }
   function removeRecord(id) {
@@ -508,6 +574,40 @@ function Connect({ app, go }) {
                   <button className="record-rm" title="Remove" onClick={() => removeRecord(r.id)}>×</button>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Inline error display for upload failures */}
+          {uploadError && (
+            <div className="records-error" style={{
+              background: "#FFF5F5",
+              border: "1px solid #FED7D7",
+              borderRadius: "6px",
+              padding: "10px 12px",
+              fontSize: "13px",
+              color: "#C53030",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "8px",
+              marginTop: hasRecords ? "8px" : "0"
+            }}>
+              <Icon name="alert" size={14} stroke={2} style={{ marginTop: "2px", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 500, marginBottom: "2px" }}>{uploadError.title}</div>
+                {uploadError.message && <div style={{ opacity: 0.9 }}>{uploadError.message}</div>}
+              </div>
+              <button
+                onClick={() => setUploadError(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#C53030",
+                  cursor: "pointer",
+                  padding: "0 4px",
+                  fontSize: "16px",
+                  lineHeight: 1
+                }}
+              >×</button>
             </div>
           )}
 
