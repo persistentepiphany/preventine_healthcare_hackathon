@@ -287,3 +287,16 @@ source-verification.md   What's live, what's cached, what we never trust
 ## One-line summary
 
 **A clinical engine that decides, an LLM that talks, and a guardrail layer that keeps them in their lanes — all running on real NHS data so the talking is grounded in what's actually in your area, what the NHS actually offers, and how long things actually take.**
+## Z.ai / GLM-5.1 Integration
+
+PreventPath uses GLM-5.1 via the Z.ai API (https://api.z.ai/v1 ) across five surfaces in the shipped product:
+
+1. **GP-Ready Summary** — GLM-5.1 renders the rules engine output as plain English for patients to show their GP
+2. **Simple / Detailed tone toggle** — two system prompts produce a patient-friendly and a clinical version of the same facts
+3. **Factor chip explain** — clicking any of the 9 risk factor chips calls GLM-5.1 to explain why that factor matters for this specific patient
+4. **Questions to ask your GP** — GLM-5.1 generates 3–4 tailored questions based on the patient's missing measurements
+5. **Unlock narration** — when a patient adds a missing measurement, GLM-5.1 writes a sentence explaining which NHS pathway has now opened up
+
+**Architecture**: The deterministic TypeScript rules engine makes every clinical decision. GLM-5.1 only writes the words. Every output passes a forbidden-token sweep that blocks any diagnosis, prescription, or invented risk percentage.
+
+**Z.ai model**: GLM-5.1 Flash via api.z.ai/v1 — used for all five natural language rendering surfaces listed above.
