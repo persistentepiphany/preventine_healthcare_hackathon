@@ -17,7 +17,8 @@ export function findMissingMeasurements(input: PatientInput): MissingMeasurement
   const missing: MissingMeasurement[] = [];
 
   // 1. Blood pressure - high priority
-  if (!input.systolicBp || !input.diastolicBp) {
+  if (input.systolicBp === undefined || input.systolicBp === null ||
+      input.diastolicBp === undefined || input.diastolicBp === null) {
     missing.push({
       key: 'blood_pressure',
       label: 'Blood pressure reading',
