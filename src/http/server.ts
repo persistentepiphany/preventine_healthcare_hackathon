@@ -107,7 +107,13 @@ export function createApp(options: RouterOptions = {}) {
       const url = new URL(req.url ?? "/", "http://localhost");
       const method = req.method ?? "GET";
       const hasBody = method === "POST" || method === "PUT" || method === "PATCH";
-      const body = hasBody ? await readBody(req) : undefined;
+
+      // For multipart file uploads, pass raw request without reading body
+      const isMultipartUpload =
+        url.pathname === "/api/upload/patient-input" &&
+        req.headers["content-type"]?.startsWith("multipart/form-data");
+
+      const body = hasBody && !isMultipartUpload ? await readBody(req) : undefined;
       const r = await dispatch(method, url.pathname, url.searchParams, body, { ...options, req });
       res.statusCode = r.status;
       res.setHeader("content-type", "application/json; charset=utf-8");
