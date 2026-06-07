@@ -56,7 +56,9 @@ function mapRedFlags(input: SeamPatientInput): string[] {
  */
 export function toRichInput(input: SeamPatientInput): RichPatientInput {
   const cholesterolRatio =
-    input.totalCholesterol !== undefined && input.hdlCholesterol !== undefined
+    input.totalCholesterol !== undefined &&
+    input.hdlCholesterol !== undefined &&
+    input.hdlCholesterol !== 0
       ? input.totalCholesterol / input.hdlCholesterol
       : undefined;
 
