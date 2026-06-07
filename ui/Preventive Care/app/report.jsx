@@ -48,6 +48,20 @@ function Report({ app, go }) {
   const { patient, measurements, measurementDetail, healthCheck, cvdRisk, completeness, actions, gpQuestions, gpSummary, trends } = D;
   const isDefaultMode = !app || app.mode === "default";
   const isLiveMode = app && app.mode === "live";
+
+  // Read location override from localStorage (same as connect.jsx)
+  function lsGet(key, fallback) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+  const locOverride = lsGet("pp-location-override", null);
+  const location = locOverride || patient.location;
+  const postcode = locOverride ? locOverride.postcode : patient.postcode;
+
   // In Default mode the CVD ring starts locked so the click-to-unlock demo
   // can showcase the change. In Demo/Live, the ring reflects the backend's
   // real QRISK3 readiness - no synthetic unlock.
@@ -71,7 +85,7 @@ function Report({ app, go }) {
 
   const reportSteps = [
     { text: "Loading your measurements", result: "6 signals", tone: "ok" },
-    { text: "Matching " + patient.postcode + " to NHS area", result: (patient.location && patient.location.icb || "NHS").replace("NHS ", ""), tone: "ok" },
+    { text: "Matching " + postcode + " to NHS area", result: (location && location.icb || "NHS").replace("NHS ", ""), tone: "ok" },
     { text: "Checking NHS Health Check rules", result: "Likely eligible", tone: "ok" },
     { text: "Scanning for missing inputs", result: "BP + cholesterol", tone: "warn" },
     { text: "Assembling prevention factors", result: "7 factors", tone: "ok" },
