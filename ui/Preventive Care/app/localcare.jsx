@@ -55,12 +55,12 @@ function LocalCare() {
   const postcode = locOverride ? locOverride.postcode : patient.postcode;
 
   // Use postcode-specific services if saved (from connect.jsx postcode change)
-  const normalizedPostcode = postcode.trim().toUpperCase().replace(/\s+/g, "");
+  const normalizedPostcode = (postcode || "").trim().toUpperCase().replace(/\s+/g, "");
   const localServices = lsGet("pp-services-" + normalizedPostcode, null);
-  const effectiveServices = localServices && localServices.length ? localServices : services;
+  const effectiveServices = (localServices && localServices.length ? localServices : services) || [];
 
   const [filter, setFilter] = useState("all");
-  const [selected, setSelected] = useState(effectiveServices[0].id);
+  const [selected, setSelected] = useState(effectiveServices[0]?.id || "");
   const [info, setInfo] = useState(null); // {title, body, url, linkLabel}
   const mapRef = useRef(null);
   const mapObj = useRef(null);
@@ -121,6 +121,21 @@ function LocalCare() {
       if (mk) mk.openPopup();
     }
   }, [selected]);
+
+  // Defensive: show error if no services available
+  if (!effectiveServices.length) {
+    return (
+      <div className="stage">
+        <div className="stage-head">
+          <div>
+            <div className="stage-eyebrow">Step 3 · Local Care</div>
+            <h1 className="stage-title">No local services found</h1>
+            <p className="stage-lede">Services could not be loaded for your area. Try refreshing or entering a different postcode on the Connect page.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const sel = effectiveServices.find((x) => x.id === selected);
   const t = sel ? travel(sel.distanceKm) : null;
