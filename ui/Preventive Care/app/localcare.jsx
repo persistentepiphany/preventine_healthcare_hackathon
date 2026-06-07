@@ -40,6 +40,20 @@ function eligChip(s) {
 function LocalCare() {
   const D = window.APP_DATA;
   const { patient, services, waitingTimes, content } = D;
+
+  // Read location override from localStorage (same as connect.jsx)
+  function lsGet(key, fallback) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+  const locOverride = lsGet("pp-location-override", null);
+  const location = locOverride || patient.location;
+  const postcode = locOverride ? locOverride.postcode : patient.postcode;
+
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(services[0].id);
   const [info, setInfo] = useState(null); // {title, body, url, linkLabel}
@@ -55,16 +69,16 @@ function LocalCare() {
     if (mapObj.current || !mapRef.current || !window.L) return;
     const L = window.L;
     const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false, attributionControl: false }).setView(
-      [patient.location.latitude, patient.location.longitude], 14
+      [location.latitude, location.longitude], 14
     );
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       subdomains: "abcd", maxZoom: 19,
     }).addTo(map);
 
-    L.marker([patient.location.latitude, patient.location.longitude], {
+    L.marker([location.latitude, location.longitude], {
       icon: L.divIcon({ className: "", html: '<div class="home-pin"><span></span></div>', iconSize: [20, 20], iconAnchor: [10, 10] }),
       zIndexOffset: 1000,
-    }).addTo(map).bindTooltip("You · " + patient.postcode, { direction: "top", offset: [0, -10] });
+    }).addTo(map).bindTooltip("You · " + postcode, { direction: "top", offset: [0, -10] });
 
     services.forEach((s) => {
       const t = travel(s.distanceKm);
@@ -91,7 +105,7 @@ function LocalCare() {
     const s = services.find((x) => x.id === selected);
     if (s && mapObj.current && window.L) {
       const L = window.L;
-      const home = [patient.location.latitude, patient.location.longitude];
+      const home = [location.latitude, location.longitude];
       const dest = [s.lat, s.lon];
       if (routeLine.current) { mapObj.current.removeLayer(routeLine.current); }
       routeLine.current = L.polyline([home, dest], {
@@ -112,7 +126,7 @@ function LocalCare() {
       <div className="stage-head">
         <div>
           <div className="stage-eyebrow">Step 3 · Navigating NHS care near you</div>
-          <h1 className="stage-title">How local NHS care works around {patient.postcode}</h1>
+          <h1 className="stage-title">How local NHS care works around {postcode}</h1>
           <p className="stage-lede">
             We don't book or refer for you - this page just shows the local services and explains
             who you'd actually be eligible to use. NHS primary care works in three different ways
