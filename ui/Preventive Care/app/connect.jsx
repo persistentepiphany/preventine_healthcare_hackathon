@@ -159,20 +159,95 @@ function Connect({ app, go }) {
   function pickFile() {
     if (fileInputRef.current) fileInputRef.current.click();
   }
-  function onFileChange(e) {
+  async function onFileChange(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const added = files.map((f) => ({
-      id: Date.now() + "-" + f.name,
-      name: f.name,
-      size: f.size,
-      type: f.type || "file",
-      addedAt: new Date().toISOString(),
-    }));
-    const next = added.concat(records);
-    setRecords(next);
-    lsSet(PP_LS.records, next);
-    app.markIngested();
+
+    // Handle patient data files (JSON, TXT, PDF)
+    const file = files[0];
+    const ext = file.name.toLowerCase().split('.').pop();
+
+    if (ext === 'json' || ext === 'txt' || ext === 'pdf') {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(window.PPApi.base + '/api/upload/patient-input', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.ok && result.data) {
+          // Convert PatientInput to manual entry format
+          const pi = result.data;
+          const newManual = {};
+
+          if (pi.age) newManual.age = { value: String(pi.age) };
+          if (pi.sexAtBirth) newManual.sex = { value: pi.sexAtBirth };
+          if (pi.smokingStatus) newManual.smoking = { value: pi.smokingStatus };
+          if (pi.systolicBp && pi.diastolicBp) {
+            newManual.bp = {
+              value: `${pi.systolicBp}/${pi.diastolicBp}`,
+              status: bandFromBp(`${pi.systolicBp}/${pi.diastolicBp}`)
+            };
+          }
+          if (pi.totalCholesterol) {
+            newManual.cholesterol = {
+              value: String(pi.totalCholesterol),
+              status: bandFromChol(pi.totalCholesterol)
+            };
+          }
+          if (pi.hdlCholesterol) newManual.hdl = { value: String(pi.hdlCholesterol) };
+          if (pi.bmi) {
+            newManual.bmi = {
+              value: String(pi.bmi),
+              status: bandFromBmi(pi.bmi)
+            };
+          }
+          if (pi.waistCircumferenceCm) {
+            newManual.waist = {
+              value: String(pi.waistCircumferenceCm),
+              status: bandFromWaist(pi.waistCircumferenceCm, pi.sexAtBirth)
+            };
+          }
+
+          setManual(newManual);
+          lsSet(PP_LS.manual, newManual);
+          app.markIngested();
+
+          // Also add to records list for display
+          const added = [{
+            id: Date.now() + "-" + file.name,
+            name: file.name,
+            size: file.size,
+            type: ext === 'pdf' ? 'application/pdf' : `text/${ext}`,
+            addedAt: new Date().toISOString(),
+          }];
+          const next = added.concat(records);
+          setRecords(next);
+          lsSet(PP_LS.records, next);
+        } else {
+          alert('Invalid patient data file: ' + (result.error || 'unknown error'));
+        }
+      } catch (err) {
+        alert('Failed to upload file: ' + err.message);
+      }
+    } else {
+      // Original behavior for other files
+      const added = files.map((f) => ({
+        id: Date.now() + "-" + f.name,
+        name: f.name,
+        size: f.size,
+        type: f.type || "file",
+        addedAt: new Date().toISOString(),
+      }));
+      const next = added.concat(records);
+      setRecords(next);
+      lsSet(PP_LS.records, next);
+      app.markIngested();
+    }
     e.target.value = "";
   }
   function removeRecord(id) {
@@ -357,7 +432,7 @@ function Connect({ app, go }) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="application/pdf,image/*"
+            accept=".json,.txt,.pdf,image/*"
             multiple
             style={{ display: "none" }}
             onChange={onFileChange}
