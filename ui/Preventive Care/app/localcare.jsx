@@ -55,7 +55,8 @@ function LocalCare() {
   const postcode = locOverride ? locOverride.postcode : patient.postcode;
 
   // Use postcode-specific services if saved (from connect.jsx postcode change)
-  const localServices = lsGet("pp-services-" + postcode, null);
+  const normalizedPostcode = postcode.trim().toUpperCase().replace(/\s+/g, "");
+  const localServices = lsGet("pp-services-" + normalizedPostcode, null);
   const effectiveServices = localServices && localServices.length ? localServices : services;
 
   const [filter, setFilter] = useState("all");

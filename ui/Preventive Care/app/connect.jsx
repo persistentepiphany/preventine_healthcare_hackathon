@@ -188,7 +188,8 @@ function Connect({ app, go }) {
 
         // Update APP_DATA with new services
         window.APP_DATA.services = newServices;
-        lsSet("pp-services-" + raw, newServices);
+        const normalizedPostcode = (next.postcode || raw).replace(/\s+/g, "");
+        lsSet("pp-services-" + normalizedPostcode, newServices);
       }
     }
 
