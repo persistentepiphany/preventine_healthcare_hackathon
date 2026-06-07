@@ -54,8 +54,12 @@ function LocalCare() {
   const location = locOverride || patient.location;
   const postcode = locOverride ? locOverride.postcode : patient.postcode;
 
+  // Use postcode-specific services if saved (from connect.jsx postcode change)
+  const localServices = lsGet("pp-services-" + postcode, null);
+  const effectiveServices = localServices && localServices.length ? localServices : services;
+
   const [filter, setFilter] = useState("all");
-  const [selected, setSelected] = useState(services[0].id);
+  const [selected, setSelected] = useState(effectiveServices[0].id);
   const [info, setInfo] = useState(null); // {title, body, url, linkLabel}
   const mapRef = useRef(null);
   const mapObj = useRef(null);
@@ -63,7 +67,7 @@ function LocalCare() {
   const routeLine = useRef(null);
   const [dirLoading, setDirLoading] = useState(false);
 
-  const shown = services.filter((s) => filter === "all" || s.type === filter);
+  const shown = effectiveServices.filter((s) => filter === "all" || s.type === filter);
 
   useEffect(() => {
     if (mapObj.current || !mapRef.current || !window.L) return;
@@ -80,7 +84,7 @@ function LocalCare() {
       zIndexOffset: 1000,
     }).addTo(map).bindTooltip("You · " + postcode, { direction: "top", offset: [0, -10] });
 
-    services.forEach((s) => {
+    effectiveServices.forEach((s) => {
       const t = travel(s.distanceKm);
       const m = L.marker([s.lat, s.lon], {
         icon: L.divIcon({ className: "", html: '<div class="svc-pin"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }),
@@ -102,7 +106,7 @@ function LocalCare() {
   }, []);
 
   useEffect(() => {
-    const s = services.find((x) => x.id === selected);
+    const s = effectiveServices.find((x) => x.id === selected);
     if (s && mapObj.current && window.L) {
       const L = window.L;
       const home = [location.latitude, location.longitude];
@@ -117,7 +121,7 @@ function LocalCare() {
     }
   }, [selected]);
 
-  const sel = services.find((x) => x.id === selected);
+  const sel = effectiveServices.find((x) => x.id === selected);
   const t = sel ? travel(sel.distanceKm) : null;
   const waitScale = Math.max(waitingTimes.rttStandard + 8, ...waitingTimes.records.map((r) => r.treatment));
 
