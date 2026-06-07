@@ -20,11 +20,10 @@ export async function renderAssessment(
 
   const assessment: PreventiveAssessment = validated.value;
 
-  if (assessment.next_step_type === "urgent_care") {
-    if (assessment.local_services && assessment.local_services.length > 0) {
-      assessment.local_services = [];
-    }
-  }
+  // For urgent care, ensure local_services is empty (safety: no services in urgent path)
+  const assessmentForRender = assessment.next_step_type === "urgent_care"
+    ? { ...assessment, local_services: [] }
+    : assessment;
 
   let client: ZaiClient | null;
   try {
@@ -32,19 +31,19 @@ export async function renderAssessment(
   } catch {
     // ZaiHttpClient constructor throws when ZAI_API_KEY is unset.
     // Fall through to the deterministic template — no LLM, no balance needed.
-    return cardOrFallback(renderFromTemplate(assessment));
+    return cardOrFallback(renderFromTemplate(assessmentForRender));
   }
 
   let raw: string;
   try {
-    raw = await client.complete(JSON.stringify(assessment));
+    raw = await client.complete(JSON.stringify(assessmentForRender));
   } catch {
     // z.ai threw — out of balance, network down, timeout, etc.
     // Try the deterministic template before giving up to the generic fallback.
-    return cardOrFallback(renderFromTemplate(assessment));
+    return cardOrFallback(renderFromTemplate(assessmentForRender));
   }
 
-  return applyCardGuardChain(raw, assessment);
+  return applyCardGuardChain(raw, assessmentForRender);
 }
 
 function cardOrFallback(card: CardJson | null): CardJson {
@@ -65,19 +64,16 @@ export async function renderCardFromMessages(
   fewShot: ZaiMessage[],
   options: RenderOptions = {},
 ): Promise<CardJson> {
-  // Caller is responsible for passing a validated assessment, but mirror the
-  // urgent-services strip for safety.
-  if (assessment.next_step_type === "urgent_care") {
-    if (assessment.local_services && assessment.local_services.length > 0) {
-      assessment.local_services = [];
-    }
-  }
+  // For urgent care, ensure local_services is empty (safety: no services in urgent path)
+  const assessmentForRender = assessment.next_step_type === "urgent_care"
+    ? { ...assessment, local_services: [] }
+    : assessment;
 
   let client: ZaiClient | null;
   try {
     client = options.client ?? new ZaiHttpClient();
   } catch {
-    return cardOrFallback(renderFromTemplate(assessment));
+    return cardOrFallback(renderFromTemplate(assessmentForRender));
   }
 
   let raw: string;
@@ -85,13 +81,13 @@ export async function renderCardFromMessages(
     raw = await client.completeChat([
       { role: "system", content: systemPrompt },
       ...fewShot,
-      { role: "user", content: JSON.stringify(assessment) },
+      { role: "user", content: JSON.stringify(assessmentForRender) },
     ]);
   } catch {
-    return cardOrFallback(renderFromTemplate(assessment));
+    return cardOrFallback(renderFromTemplate(assessmentForRender));
   }
 
-  return applyCardGuardChain(raw, assessment);
+  return applyCardGuardChain(raw, assessmentForRender);
 }
 
 /** Re-exported so tone.ts can compose the default prompt + a tone clause. */
