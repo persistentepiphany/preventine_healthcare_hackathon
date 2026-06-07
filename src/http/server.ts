@@ -108,7 +108,7 @@ export function createApp(options: RouterOptions = {}) {
       const method = req.method ?? "GET";
       const hasBody = method === "POST" || method === "PUT" || method === "PATCH";
       const body = hasBody ? await readBody(req) : undefined;
-      const r = await dispatch(method, url.pathname, url.searchParams, body, options);
+      const r = await dispatch(method, url.pathname, url.searchParams, body, { ...options, req });
       res.statusCode = r.status;
       res.setHeader("content-type", "application/json; charset=utf-8");
       res.end(JSON.stringify(r.body));

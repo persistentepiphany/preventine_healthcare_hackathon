@@ -47,7 +47,9 @@ import {
   type SessionData,
 } from "../storage/sessions.js";
 import type { ZaiClient } from "../rendering/zai_client.js";
+import type { IncomingMessage } from "node:http";
 import type { CardJson } from "../rendering/card_schema.js";
+import { extractMultipartFile, parseUploadedFile } from "./file-upload.js";
 import type { LocalService, PreventiveAssessment } from "../rules/types.js";
 
 /**
@@ -70,6 +72,8 @@ export interface RouterResponse {
 export interface RouterOptions {
   /** Inject a ZAI client for tests. Defaults to the live HTTP client. */
   zaiClient?: ZaiClient;
+  /** Pass the raw request for multipart parsing (file uploads). */
+  req?: IncomingMessage;
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -895,6 +899,48 @@ export async function listSessions(
 }
 
 /* -------------------------------------------------------------------------- */
+/* POST /api/upload/patient-input                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Parse uploaded patient data file (JSON or plain text key=value)
+ */
+export async function postUploadPatientInput(
+  query: URLSearchParams,
+  body: unknown,
+  options: RouterOptions & { req?: IncomingMessage } = {},
+): Promise<RouterResponse> {
+  if (!options.req) {
+    return { status: 400, body: { error: "multipart request required" } };
+  }
+
+  const fileData = await extractMultipartFile(options.req);
+  if (!fileData) {
+    return { status: 400, body: { error: "no file uploaded or invalid format" } };
+  }
+
+  const result = parseUploadedFile(fileData.content, fileData.filename);
+
+  if (!result.ok) {
+    return {
+      status: 400,
+      body: {
+        error: result.error,
+        issues: result.issues,
+      },
+    };
+  }
+
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      data: result.data,
+    },
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Dispatcher                                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -927,6 +973,9 @@ export async function dispatch(
   }
   if (method === "POST" && pathname === "/api/nhs/full") {
     return postFull(query, body, options);
+  }
+  if (method === "POST" && pathname === "/api/upload/patient-input") {
+    return postUploadPatientInput(query, body, options);
   }
 
   // /api/nhs/session(/:id) — collection and resource routes.
