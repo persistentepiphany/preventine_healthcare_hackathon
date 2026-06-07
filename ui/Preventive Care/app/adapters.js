@@ -3,7 +3,7 @@
    clinical truth (factors, readiness, card text, services, etc.); the seed
    carries UI dressing (name, sparklines, lifestyle prose, heart rate, steps);
    the fallback is the original static fixture. We never invent clinical
-   strings — all status labels here come from NHS-standard band names. */
+   strings - all status labels here come from NHS-standard band names. */
 
 (function () {
 
@@ -85,7 +85,7 @@
         note: bpVal ? "Key input for any CVD risk estimate." : "Key input for any CVD risk estimate.",
         source: bpVal ? "Self-reported" : null,
         key: true,
-        // Unlock helpers for the demo's "add missing" flow — only meaningful when missing.
+        // Unlock helpers for the demo's "add missing" flow - only meaningful when missing.
         unlockValue: bpVal == null ? "128/82" : undefined,
         unlockStatus: bpVal == null ? "raised" : undefined,
         unlockStatusLabel: bpVal == null ? "Slightly raised" : undefined,
@@ -180,7 +180,7 @@
     var fb = (fallback && fallback.healthCheck) || {};
 
     if (!eligibility) {
-      // Fallback path — backend missing.
+      // Fallback path - backend missing.
       return fb;
     }
 
@@ -200,7 +200,7 @@
       possibly: age + " falls in the 40–74 age band, and no recorded condition would exclude you.",
       not_age_eligible: "You're " + age + ". The NHS Health Check is offered to adults aged 40 to 74.",
       not_eligible_existing_condition: "A condition on your profile means follow-up happens through your existing care team instead.",
-      not_applicable: "This route doesn't apply right now — your existing care team manages the related checks.",
+      not_applicable: "This route doesn't apply right now - your existing care team manages the related checks.",
     };
 
     var p = (seed && seed.patient) || {};
@@ -216,14 +216,14 @@
       reason: reasonMap[eligibility] || fb.reason,
       includes: fb.includes || ["Height, weight & waist", "Blood pressure", "Cholesterol", "Diabetes risk", "Lifestyle review"],
       cadence: fb.cadence || "Eligible adults are invited every 5 years.",
-      action: fb.action || "If you haven't been invited, NHS guidance is to contact your GP practice — or your local authority if your practice doesn't offer it.",
-      source: fb.source || "NHS.uk — NHS Health Check",
+      action: fb.action || "If you haven't been invited, NHS guidance is to contact your GP practice - or your local authority if your practice doesn't offer it.",
+      source: fb.source || "NHS.uk - NHS Health Check",
       bookUrl: fb.bookUrl || "https://www.nhs.uk/tests-and-treatments/nhs-health-check/",
       criteria: [
         { label: "Aged 40–74", met: ageMet, detail: "You're " + age + "." },
-        { label: "No existing CVD diagnosis", met: !p.hasCvd, detail: p.hasCvd ? "CVD on profile — manage through care team." : "None recorded on your profile." },
+        { label: "No existing CVD diagnosis", met: !p.hasCvd, detail: p.hasCvd ? "CVD on profile - manage through care team." : "None recorded on your profile." },
         { label: "Not already monitored for a related condition", met: !exclusions, detail: exclusions ? "A condition on your profile means follow-up happens elsewhere." : "No diabetes, kidney or heart condition on file." },
-        { label: "No check in the last 5 years", met: "unknown", detail: "We can't see a previous check — worth confirming with your GP." },
+        { label: "No check in the last 5 years", met: "unknown", detail: "We can't see a previous check - worth confirming with your GP." },
       ],
     };
   }
@@ -263,7 +263,7 @@
     }
     if (p.smokingStatus === "current") knownFactors.push({ label: "Current smoker", weight: "raises" });
     if (p.smokingStatus === "former") knownFactors.push({ label: "Ex-smoker", weight: "raises" });
-    if (p.bmi != null && p.bmi >= 25) knownFactors.push({ label: "BMI " + p.bmi + " — " + (p.bmi >= 30 ? "obese" : "overweight"), weight: "raises" });
+    if (p.bmi != null && p.bmi >= 25) knownFactors.push({ label: "BMI " + p.bmi + " - " + (p.bmi >= 30 ? "obese" : "overweight"), weight: "raises" });
     if (p.waistCircumferenceCm != null) {
       var waist = waistBand(p.waistCircumferenceCm, p.sexAtBirth);
       if (waist.status !== "good") knownFactors.push({ label: "Raised waist (" + p.waistCircumferenceCm + " cm)", weight: "raises" });
@@ -275,10 +275,10 @@
     var state = qrisk.ready ? "ready" : "incomplete";
     var headline = qrisk.ready ? (fb.readyHeadline || "Ready for a QRISK3 assessment") : (fb.headline || "CVD risk can't be calculated yet");
     var body = qrisk.ready
-      ? (fb.readyBody || "All the inputs QRISK3 needs are now present. Your GP or nurse can calculate your formal 10-year risk — this tool deliberately leaves the number to a clinician.")
+      ? (fb.readyBody || "All the inputs QRISK3 needs are now present. Your GP or nurse can calculate your formal 10-year risk - this tool deliberately leaves the number to a clinician.")
       : ("A reliable 10-year cardiovascular risk estimate (QRISK3) needs your "
          + missingHighValue.join(" and ").toLowerCase()
-         + " — " + (missingHighValue.length > 1 ? "all are missing" : "this is missing") + ". Below is what we can already see.");
+         + " - " + (missingHighValue.length > 1 ? "all are missing" : "this is missing") + ". Below is what we can already see.");
 
     return {
       state: state,
@@ -292,7 +292,7 @@
         "Whether a statin conversation is worth having",
       ],
       readyHeadline: fb.readyHeadline || "Ready for a QRISK3 assessment",
-      readyBody: fb.readyBody || "All the inputs QRISK3 needs are now present. Your GP or nurse can calculate your formal 10-year risk — this tool deliberately leaves the number to a clinician.",
+      readyBody: fb.readyBody || "All the inputs QRISK3 needs are now present. Your GP or nurse can calculate your formal 10-year risk - this tool deliberately leaves the number to a clinician.",
       safety: fb.safety || "This is an educational prevention prototype, not clinical decision support. It does not diagnose or recommend treatment.",
     };
   }
@@ -324,7 +324,7 @@
   // hospital + GP entries with locally-appropriate ones. Pharmacies stay
   // because their framing ("walk in anywhere, no catchment") is true
   // nationally. UI metadata (whyHere, eligibility, offers, hours, etc.) is
-  // generic enough to reuse — we only swap name/address/lat/lon/phone/
+  // generic enough to reuse - we only swap name/address/lat/lon/phone/
   // distance/catchment. Keep this table tight; only seeds we actually ship.
   var REGIONAL_OVERRIDES = {
     "Birmingham": {
@@ -391,7 +391,7 @@
 
   // Pick order: (1) curated REGIONAL_OVERRIDES for the six cities we ship
   // hand-written copy for; (2) live ODS services from /api/nhs/context (light
-  // mode) for any other postcode — gives real GP / pharmacy / hospital names
+  // mode) for any other postcode - gives real GP / pharmacy / hospital names
   // pinned around the user's actual coords; (3) the Manchester fallback re-
   // centred on the user's coords so the map at least doesn't snap home to
   // Manchester. Pharmacies stay neutrally framed in all paths because the
@@ -472,7 +472,7 @@
         name: titleCaseName(s.name),
         type: uiType,
         typeLabel: tpl.typeLabel || (uiType === "gp_practice" ? "GP Practice" : uiType === "pharmacy" ? "Pharmacy" : "Hospital"),
-        address: s.address || tpl.address || "—",
+        address: s.address || tpl.address || "N/A",
         lat: c.lat,
         lon: c.lon,
         distanceKm: radius,
@@ -505,7 +505,7 @@
       });
     }
 
-    // Path 2: live ODS data — works for any English postcode in light/full mode.
+    // Path 2: live ODS data - works for any English postcode in light/full mode.
     var ods = (context && Array.isArray(context.services)) ? context.services : [];
     if (ods.length && haveCoords) {
       var enriched = adaptServicesFromOds(ods, fbServices, lat0, lon0);
@@ -527,7 +527,7 @@
   function adaptWaitingTimes(context, fallback, services) {
     // Backend's waitingTimes carries {description, isPersonalPrediction,
     // disclaimer}. In `light` mode for a known ICB, `description` becomes
-    // "In your area (NHS …), <pct>% of patients … within 18 weeks" — surface
+    // "In your area (NHS …), <pct>% of patients … within 18 weeks" - surface
     // that as a header note. The numeric records[] table doesn't exist at the
     // backend (no per-trust feed), so we keep the fallback's wait scaffolding
     // but swap the provider names for the live hospitals in view so a York
@@ -594,7 +594,7 @@
         title: "Get your blood pressure checked",
         body: profile.card && profile.card.body
           ? "It's your single highest-value missing measurement. " + (profile.card.next_step || "")
-          : "It's your single highest-value missing measurement. Adults 40+ in England can get a free BP check at a participating pharmacy — no appointment needed.",
+          : "It's your single highest-value missing measurement. Adults 40+ in England can get a free BP check at a participating pharmacy - no appointment needed.",
         where: "Local pharmacy · Free BP check",
         source: "NHS pharmacy BP check guidance",
       });
@@ -618,7 +618,7 @@
       actions.push({
         priority: 1, tag: "Do first", tone: "attention",
         title: profile.card && profile.card.headline || "Review with your GP",
-        body: profile.card && profile.card.body || "Your measurements look complete — bring them to a routine GP review.",
+        body: profile.card && profile.card.body || "Your measurements look complete - bring them to a routine GP review.",
         where: "Your GP practice",
         source: "NHS Health Check",
       });
@@ -640,7 +640,7 @@
         title: "Book or ask about an NHS Health Check",
         body: "You appear eligible. This bundles BP, cholesterol, diabetes risk and a lifestyle review into one free appointment.",
         where: "Your GP practice or local council",
-        source: "NHS.uk — NHS Health Check",
+        source: "NHS.uk - NHS Health Check",
       });
     }
 
@@ -651,7 +651,7 @@
         title: "Free NHS stop-smoking support",
         body: "Combining specialist support with stop-smoking aids gives you the best chance of quitting for good.",
         where: "Local stop-smoking service · GP · pharmacy",
-        source: "NHS Live Well — Quit smoking",
+        source: "NHS Live Well - Quit smoking",
       });
     } else {
       var pres = (seed && seed.presentation) || {};
@@ -696,8 +696,8 @@
       name: pres.name || (fallback.patient && fallback.patient.name) || "Demo Patient",
       initials: pres.initials || (fallback.patient && fallback.patient.initials) || "DP",
       age: p.age,
-      sex: pres.sex || (fallback.patient && fallback.patient.sex) || "—",
-      ethnicity: pres.ethnicity || (fallback.patient && fallback.patient.ethnicity) || "—",
+      sex: pres.sex || (fallback.patient && fallback.patient.sex) || "N/A",
+      ethnicity: pres.ethnicity || (fallback.patient && fallback.patient.ethnicity) || "N/A",
       postcode: pres.postcode || (fallback.patient && fallback.patient.postcode) || "M13 9PL",
       livesInEngland: p.livesInEngland !== false,
       location: location,

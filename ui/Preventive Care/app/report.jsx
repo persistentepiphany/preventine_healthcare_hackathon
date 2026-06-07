@@ -1,4 +1,4 @@
-/* Stage 2 — Report */
+/* Stage 2 - Report */
 function Sec({ n, kicker, title, right }) {
   return (
     <div className="sec-head sec-head--num">
@@ -50,7 +50,7 @@ function Report({ app, go }) {
   const isLiveMode = app && app.mode === "live";
   // In Default mode the CVD ring starts locked so the click-to-unlock demo
   // can showcase the change. In Demo/Live, the ring reflects the backend's
-  // real QRISK3 readiness — no synthetic unlock.
+  // real QRISK3 readiness - no synthetic unlock.
   const backendReady = !isDefaultMode && cvdRisk && cvdRisk.state === "ready";
   const [copied, setCopied] = useState(false);
   const [unlocked, setUnlocked] = useState(backendReady);
@@ -94,7 +94,7 @@ function Report({ app, go }) {
           <section className="panel" style={{ textAlign: "center", padding: "48px 28px" }}>
             <span className="empty-ico"><Icon name="info" size={26} stroke={1.6} /></span>
             <div className="empty-title" style={{ marginTop: 14 }}>Your report is built from what you enter</div>
-            <div className="empty-sub" style={{ margin: "8px 0 22px" }}>Only the measurements you add will appear — nothing is autofilled.</div>
+            <div className="empty-sub" style={{ margin: "8px 0 22px" }}>Only the measurements you add will appear - nothing is autofilled.</div>
             <button className="cta" onClick={() => go("connect")}>Back to Connect <Icon name="arrowRight" size={14} stroke={2} /></button>
           </section>
         </div>
@@ -194,7 +194,7 @@ function Report({ app, go }) {
           <div className="stage-eyebrow">Step 2 · Report</div>
           <h1 className="stage-title">{patient.name.split(" ")[0]}'s prevention report</h1>
           <p className="stage-lede">
-            What your data shows, what's missing, and the highest-value things to act on — modelled
+            What your data shows, what's missing, and the highest-value things to act on - modelled
             on NHS and NICE prevention guidance.
           </p>
         </div>
@@ -256,7 +256,7 @@ function Report({ app, go }) {
                   <button className="cta" onClick={addMissing} disabled={adding}>
                     {adding ? <><span className="btn-spin" /> Adding…</> : <><Icon name="plus" size={15} stroke={2.2} /> Add {missingLabel}</>}
                   </button>
-                  <span className="unlock-note">Demo — simulates linking the missing results</span>
+                  <span className="unlock-note">Demo - simulates linking the missing results</span>
                 </div>
               ) : (
                 <div className="unlock-actions">
@@ -352,8 +352,8 @@ function Report({ app, go }) {
           <FactorMix mix={factorMix} />
           <p className="fmix-note">
             {unlocked
-              ? "Both missing checks are now recorded, so every QRISK3 input is in place — a clinician can calculate the formal estimate."
-              : "Five recorded factors push your risk up and two are protective — but two key inputs are still unknown, which is why a full estimate isn't possible yet."}
+              ? "Both missing checks are now recorded, so every QRISK3 input is in place - a clinician can calculate the formal estimate."
+              : "Five recorded factors push your risk up and two are protective - but two key inputs are still unknown, which is why a full estimate isn't possible yet."}
           </p>
         </section>
       </div>

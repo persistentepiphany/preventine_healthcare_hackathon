@@ -919,7 +919,7 @@ export async function postUploadPatientInput(
     return { status: 400, body: { error: "no file uploaded or invalid format" } };
   }
 
-  const result = parseUploadedFile(fileData.content, fileData.filename);
+  const result = await parseUploadedFile(fileData.content, fileData.filename);
 
   if (!result.ok) {
     return {
@@ -937,6 +937,8 @@ export async function postUploadPatientInput(
       ok: true,
       data: result.data,
     },
+  };
+}
   };
 }
 

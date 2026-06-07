@@ -1,4 +1,4 @@
-/* UI primitives — Apple-Health-flavoured. Exported to window for other scripts. */
+/* UI primitives - Apple-Health-flavoured. Exported to window for other scripts. */
 const { useState, useEffect, useRef } = React;
 
 /* ---------------- Icons (simple line glyphs) ---------------- */
@@ -141,7 +141,7 @@ function SegRing({ segments, size = 132, thickness = 10, color = "#4A80BC", chil
             strokeLinecap="round"
             style={{ transition: "stroke .5s ease" }}
           >
-            <title>{s.label} — {s.done ? "recorded" : "missing"}</title>
+            <title>{s.label} - {s.done ? "recorded" : "missing"}</title>
           </path>
         ))}
       </svg>

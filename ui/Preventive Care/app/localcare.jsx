@@ -1,4 +1,4 @@
-/* Stage 3 — Local Care: dark map + services + waiting times */
+/* Stage 3 - Local Care: dark map + services + waiting times */
 const SVC_META = {
   gp_practice: { icon: "stethoscope", label: "GP Practice" },
   pharmacy: { icon: "pharmacy", label: "Pharmacy" },
@@ -23,7 +23,7 @@ function travel(km) {
 /* likely-eligibility chip from NHS rules (deterministic).
    GPs: registration matters, so the chip tells the user where they sit
         relative to the practice's catchment.
-   Pharmacies: no registration, no catchment — walk-in.
+   Pharmacies: no registration, no catchment - walk-in.
    Hospitals: never a walk-in route; referral only. */
 function eligChip(s) {
   if (s.type === "gp_practice") {
@@ -114,31 +114,31 @@ function LocalCare() {
           <div className="stage-eyebrow">Step 3 · Navigating NHS care near you</div>
           <h1 className="stage-title">How local NHS care works around {patient.postcode}</h1>
           <p className="stage-lede">
-            We don't book or refer for you — this page just shows the local services and explains
+            We don't book or refer for you - this page just shows the local services and explains
             who you'd actually be eligible to use. NHS primary care works in three different ways
             depending on the service.
           </p>
         </div>
       </div>
 
-      {/* Three-tier mental model — orientation for what each service type can and can't do. */}
+      {/* Three-tier mental model - orientation for what each service type can and can't do. */}
       <section className="lc-mental-model" aria-label="How local NHS care works">
         <div className="lc-mm-card">
           <div className="lc-mm-head"><span className="lc-mm-pin"><Icon name="pharmacy" size={14} stroke={1.9} /></span> Pharmacy</div>
           <div className="lc-mm-rule">Walk in</div>
-          <div className="lc-mm-sub">Free BP check for anyone 40+ in England. No registration, no catchment — any participating pharmacy works.</div>
+          <div className="lc-mm-sub">Free BP check for anyone 40+ in England. No registration, no catchment - any participating pharmacy works.</div>
         </div>
         <div className="lc-mm-arrow"><Icon name="arrowRight" size={14} stroke={1.8} /></div>
         <div className="lc-mm-card">
           <div className="lc-mm-head"><span className="lc-mm-pin"><Icon name="stethoscope" size={14} stroke={1.9} /></span> GP practice</div>
           <div className="lc-mm-rule">Register</div>
-          <div className="lc-mm-sub">You can only be seen at a GP you're registered with. Catchment matters — see the chip on each practice. Out-of-area registration is possible (see below).</div>
+          <div className="lc-mm-sub">You can only be seen at a GP you're registered with. Catchment matters - see the chip on each practice. Out-of-area registration is possible (see below).</div>
         </div>
         <div className="lc-mm-arrow"><Icon name="arrowRight" size={14} stroke={1.8} /></div>
         <div className="lc-mm-card">
           <div className="lc-mm-head"><span className="lc-mm-pin"><Icon name="hospital" size={14} stroke={1.9} /></span> Hospital</div>
           <div className="lc-mm-rule">Referral only</div>
-          <div className="lc-mm-sub">No walk-in route for preventive care. Your GP refers you when needed — A&E is for emergencies, not routine checks.</div>
+          <div className="lc-mm-sub">No walk-in route for preventive care. Your GP refers you when needed - A&E is for emergencies, not routine checks.</div>
         </div>
       </section>
 
@@ -250,7 +250,7 @@ function LocalCare() {
         </div>
       )}
 
-      {/* Out-of-area registration — informed-choice card. Only relevant when GP
+      {/* Out-of-area registration - informed-choice card. Only relevant when GP
           practices are in view, since it's a GP-specific NHS navigation detail. */}
       {(filter === "all" || filter === "gp_practice") && (
         <section className="lc-info-card">
@@ -259,7 +259,7 @@ function LocalCare() {
             <h3 className="lc-info-title">Thinking about registering at a practice near work?</h3>
           </div>
           <p className="lc-info-body">
-            GP practices in England can accept out-of-area patients at their discretion — handy if you spend your weekdays in
+            GP practices in England can accept out-of-area patients at their discretion - handy if you spend your weekdays in
             central Manchester or another city. It's worth knowing the trade-off before you do:
           </p>
           <ul className="lc-info-list">
@@ -273,7 +273,7 @@ function LocalCare() {
         </section>
       )}
 
-      {/* Waiting times — minimalist, informative */}
+      {/* Waiting times - minimalist, informative */}
       <div className="sec-head">
         <div>
           <div className="sec-eyebrow">If you're later referred</div>
@@ -313,7 +313,7 @@ function LocalCare() {
                 <span className={"wait-trend wait-trend--" + r.trend}>
                   {r.trend === "down" && <Icon name="trendDown" size={14} stroke={2} />}
                   {r.trend === "up" && <Icon name="trendUp" size={14} stroke={2} />}
-                  {r.trend === "flat" && <span className="wait-flat">—</span>}
+                  {r.trend === "flat" && <span className="wait-flat">-</span>}
                 </span>
               </div>
             </button>

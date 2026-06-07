@@ -83,10 +83,10 @@
         lsoa: "Manchester 035C", imdDecile: 2,
       },
       lifestyle: {
-        smoking: "Ex-smoker — quit 2019 (20 pack-years)", smokingFlag: "history",
+        smoking: "Ex-smoker - quit 2019 (20 pack-years)", smokingFlag: "history",
         alcohol: "~16 units / week", alcoholFlag: "raised",
-        activity: "Low — mostly sedentary", activityFlag: "raised",
-        familyHistory: "Father — heart attack, age 58", familyHistoryFlag: "raised",
+        activity: "Low - mostly sedentary", activityFlag: "raised",
+        familyHistory: "Father - heart attack, age 58", familyHistoryFlag: "raised",
       },
       heartRate: { value: 74, unit: "bpm", status: "good", spark: pulseSpark(74), source: "Connected watch" },
       steps: { value: 5240, target: 8000, status: "raised", spark: [6100, 5800, 5200, 4900, 5400, 5240], trend: "down" },
@@ -126,9 +126,9 @@
           lsoa: "Birmingham 121A", imdDecile: 3,
         },
         lifestyle: {
-          smoking: "Current smoker — 10/day", smokingFlag: "raised",
+          smoking: "Current smoker - 10/day", smokingFlag: "raised",
           alcohol: "Rarely drinks", alcoholFlag: "good",
-          activity: "Moderate — walks daily", activityFlag: "good",
+          activity: "Moderate - walks daily", activityFlag: "good",
           familyHistory: "No first-degree CVD history", familyHistoryFlag: "good",
         },
         heartRate: { value: 78, unit: "bpm", status: "good", spark: pulseSpark(78), source: "Self-reported" },
@@ -162,8 +162,8 @@
         lifestyle: {
           smoking: "Never smoked", smokingFlag: "good",
           alcohol: "~6 units / week", alcoholFlag: "good",
-          activity: "Active — cycling 3×/wk", activityFlag: "good",
-          familyHistory: "Mother — stroke, age 71", familyHistoryFlag: "raised",
+          activity: "Active - cycling 3×/wk", activityFlag: "good",
+          familyHistory: "Mother - stroke, age 71", familyHistoryFlag: "raised",
         },
         heartRate: { value: 68, unit: "bpm", status: "good", spark: pulseSpark(68), source: "Connected watch" },
         steps: { value: 8900, target: 8000, status: "good", spark: [8200, 8600, 9100, 8800, 9000, 8900], trend: "flat" },
@@ -196,7 +196,7 @@
         lifestyle: {
           smoking: "Never smoked", smokingFlag: "good",
           alcohol: "~4 units / week", alcoholFlag: "good",
-          activity: "Active — runs 3×/wk", activityFlag: "good",
+          activity: "Active - runs 3×/wk", activityFlag: "good",
           familyHistory: "No first-degree CVD history", familyHistoryFlag: "good",
         },
         heartRate: { value: 62, unit: "bpm", status: "good", spark: pulseSpark(62), source: "Connected watch" },
@@ -229,10 +229,10 @@
           lsoa: "Newcastle 011D", imdDecile: 5,
         },
         lifestyle: {
-          smoking: "Ex-smoker — quit 2021", smokingFlag: "history",
+          smoking: "Ex-smoker - quit 2021", smokingFlag: "history",
           alcohol: "~12 units / week", alcoholFlag: "raised",
-          activity: "Moderate — walks daily", activityFlag: "good",
-          familyHistory: "Brother — high cholesterol, age 45", familyHistoryFlag: "raised",
+          activity: "Moderate - walks daily", activityFlag: "good",
+          familyHistory: "Brother - high cholesterol, age 45", familyHistoryFlag: "raised",
         },
         heartRate: { value: 70, unit: "bpm", status: "good", spark: pulseSpark(70), source: "Self-reported" },
         steps: { value: 7800, target: 8000, status: "good", spark: [7300, 7500, 7900, 7700, 7900, 7800], trend: "flat" },
@@ -266,8 +266,8 @@
         lifestyle: {
           smoking: "Never smoked", smokingFlag: "good",
           alcohol: "Rarely drinks", alcoholFlag: "good",
-          activity: "Low — mostly sedentary", activityFlag: "raised",
-          familyHistory: "Father — heart attack, age 60", familyHistoryFlag: "raised",
+          activity: "Low - mostly sedentary", activityFlag: "raised",
+          familyHistory: "Father - heart attack, age 60", familyHistoryFlag: "raised",
         },
         heartRate: { value: 76, unit: "bpm", status: "good", spark: pulseSpark(76), source: "Self-reported" },
         steps: { value: 4100, target: 8000, status: "raised", spark: [3900, 4200, 3800, 4300, 4100, 4100], trend: "flat" },
@@ -298,9 +298,9 @@
           lsoa: "Liverpool 062B", imdDecile: 2,
         },
         lifestyle: {
-          smoking: "Ex-smoker — quit 2018", smokingFlag: "history",
+          smoking: "Ex-smoker - quit 2018", smokingFlag: "history",
           alcohol: "~20 units / week", alcoholFlag: "raised",
-          activity: "Low — mostly sedentary", activityFlag: "raised",
+          activity: "Low - mostly sedentary", activityFlag: "raised",
           familyHistory: "No first-degree CVD history", familyHistoryFlag: "good",
         },
         heartRate: { value: 75, unit: "bpm", status: "good", spark: pulseSpark(75), source: "Self-reported" },
@@ -313,7 +313,7 @@
   // -- Randomization pools (names + English postcodes) ------------------
   //
   // Postcodes are real and resolve via postcodes.io. The location object
-  // here is only a fallback for when the live API fails — the live call in
+  // here is only a fallback for when the live API fails - the live call in
   // composeAppData() overwrites it. Rough city-centre lat/lon is enough for
   // the map to render sensibly during demo fallbacks.
 
@@ -375,7 +375,7 @@
   }
   function initialsOf(name) {
     var parts = String(name || "").trim().split(/\s+/);
-    if (!parts.length) return "—";
+    if (!parts.length) return "N/A";
     var first = parts[0][0] || "";
     var last = parts[parts.length - 1][0] || "";
     return (first + last).toUpperCase();

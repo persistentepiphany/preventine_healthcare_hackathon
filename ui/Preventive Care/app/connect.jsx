@@ -1,4 +1,4 @@
-/* Stage 1 — Connect: profile, location, data sources, manual entry + upload.
+/* Stage 1 - Connect: profile, location, data sources, manual entry + upload.
    Demo = pre-loaded, Live = from scratch. User-entered values + uploaded
    records persist to localStorage so they survive reloads (prototype only). */
 
@@ -20,7 +20,7 @@ function lsSet(key, value) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
-    /* quota / private mode — ignore */
+    /* quota / private mode - ignore */
   }
 }
 
@@ -118,10 +118,10 @@ function Connect({ app, go }) {
       postcode: r.data.resolvedPostcode || raw,
       latitude: loc.latitude,
       longitude: loc.longitude,
-      localAuthority: loc.adminDistrict || "—",
-      icb: loc.icb || "—",
-      nhsRegion: loc.region || "—",
-      lsoa: loc.lsoa || "—",
+      localAuthority: loc.adminDistrict || "N/A",
+      icb: loc.icb || "N/A",
+      nhsRegion: loc.region || "N/A",
+      lsoa: loc.lsoa || "N/A",
     };
     setLocOverride(next);
     lsSet(PP_LS.location, next);
@@ -183,7 +183,7 @@ function Connect({ app, go }) {
 
   const hasManual = Object.keys(manual).length > 0;
   const hasRecords = records.length > 0;
-  const ageBand = patient.age ? patient.age + " yrs" : "—";
+  const ageBand = patient.age ? patient.age + " yrs" : "N/A";
 
   // Build the backend PatientInput from manual entries only. Anything the
   // user did not enter stays undefined → the backend marks it "unknown" and
@@ -238,7 +238,7 @@ function Connect({ app, go }) {
           <h1 className="stage-title">Welcome back, {patient.name.split(" ")[0]}</h1>
           <p className="stage-lede">
             {app.mode === "live"
-              ? "Link your NHS record or add results manually — your prevention report builds from what you add."
+              ? "Link your NHS record or add results manually - your prevention report builds from what you add."
               : "Your demo profile is pre-loaded. Tweak your location or add measurements, then continue to your report."}
           </p>
         </div>
@@ -251,7 +251,7 @@ function Connect({ app, go }) {
         )}
       </div>
 
-      {/* Profile hero — who we have on file */}
+      {/* Profile hero - who we have on file */}
       <section className="panel profile-strip">
         <span className="avatar-xl">{patient.initials}</span>
         <div className="profile-strip-id">
@@ -274,7 +274,7 @@ function Connect({ app, go }) {
         </button>
       </section>
 
-      {/* Location & NHS area — geography resolves immediately, postcode editable */}
+      {/* Location & NHS area - geography resolves immediately, postcode editable */}
       <section className="panel loc-panel">
         <div className="loc-map" ref={mapRef} />
         <div className="loc-info">
@@ -353,7 +353,7 @@ function Connect({ app, go }) {
             })}
           </div>
 
-          {/* Hidden file input — triggered by the "Upload a record" source row */}
+          {/* Hidden file input - triggered by the "Upload a record" source row */}
           <input
             ref={fileInputRef}
             type="file"
@@ -487,7 +487,7 @@ function ManualEntryForm({ patient, initial, onSave, onCancel, onClear }) {
         <label className="manual-field">
           <span className="manual-field-label">Sex at birth</span>
           <select value={sex} onChange={(e) => setSex(e.target.value)}>
-            <option value="">—</option>
+            <option value="">-</option>
             <option value="female">Female</option>
             <option value="male">Male</option>
             <option value="intersex">Intersex</option>
@@ -517,14 +517,14 @@ function ManualEntryForm({ patient, initial, onSave, onCancel, onClear }) {
         <label className="manual-field">
           <span className="manual-field-label">Smoking</span>
           <select value={smoking} onChange={(e) => setSmoking(e.target.value)}>
-            <option value="">—</option>
+            <option value="">-</option>
             <option value="never">Never smoked</option>
             <option value="former">Former smoker</option>
             <option value="current">Current smoker</option>
           </select>
         </label>
       </div>
-      <p className="manual-foot-note">Only fields you fill in get sent to the engine — empty fields stay "Not recorded".</p>
+      <p className="manual-foot-note">Only fields you fill in get sent to the engine - empty fields stay "Not recorded".</p>
       <div className="manual-actions">
         {onClear && <button type="button" className="manual-cancel" onClick={onClear}>Clear saved</button>}
         <button type="button" className="manual-cancel" onClick={onCancel}>Cancel</button>

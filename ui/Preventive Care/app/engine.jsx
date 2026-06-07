@@ -1,4 +1,4 @@
-/* Engine-run animation — staggered status messages with a progress bar.
+/* Engine-run animation - staggered status messages with a progress bar.
    Used for live ingestion (Connect) and report generation (Report). */
 function EngineRun({ steps, onDone, title, sub, holdMs = 750, doneLabel = "Complete" }) {
   const [i, setI] = useState(0); // number of lines resolved

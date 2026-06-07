@@ -8,7 +8,7 @@ export interface UploadResult {
 
 export interface UploadError {
   ok: false;
-  error: "invalid_format" | "validation_failed";
+  error: "invalid_format" | "validation_failed" | "pdf_parse_failed";
   issues?: { path: string; message: string }[];
 }
 
@@ -67,30 +67,46 @@ function parseValue(value: string): unknown {
 }
 
 /**
+ * Parse PDF file and extract text
+ */
+async function parsePdf(content: Buffer): Promise<string | null> {
+  try {
+    const pdfparse = (await import("pdf-parse")).default;
+    const data = await pdfparse(content);
+    return data.text;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Parse file content based on detected format
  */
-function parseFileContent(content: string, filename: string): unknown {
-  const trimmed = content.trim();
+async function parseFileContent(content: Buffer, filename: string): Promise<unknown> {
+  const trimmed = content.toString("utf-8").trim();
+
+  // PDF files
+  if (filename.toLowerCase().endsWith(".pdf")) {
+    const text = await parsePdf(content);
+    if (!text) throw new Error("Failed to parse PDF");
+    return parsePlainLines(text);
+  }
 
   // Try JSON first
   if (filename.endsWith(".json") || trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    try {
-      return JSON.parse(content);
-    } catch {
-      // Not valid JSON, fall through to plain text
-    }
+    return JSON.parse(trimmed);
   }
 
   // Plain text key=value format
-  return parsePlainLines(content);
+  return parsePlainLines(trimmed);
 }
 
 /**
  * Parse uploaded file and validate as PatientInput
  */
-export function parseUploadedFile(content: string, filename: string): UploadResponse {
+export async function parseUploadedFile(content: Buffer, filename: string): Promise<UploadResponse> {
   try {
-    const parsed = parseFileContent(content, filename);
+    const parsed = await parseFileContent(content, filename);
     const validation = parsePatientInput(parsed);
 
     if (validation.ok) {
@@ -99,15 +115,17 @@ export function parseUploadedFile(content: string, filename: string): UploadResp
       return { ok: false, error: "validation_failed", issues: validation.issues };
     }
   } catch {
+    if (filename.toLowerCase().endsWith(".pdf")) {
+      return { ok: false, error: "pdf_parse_failed" };
+    }
     return { ok: false, error: "invalid_format" };
   }
 }
 
 /**
  * Extract file content from multipart/form-data request
- * Note: This is a simple parser. For production, use a library like multer.
  */
-export async function extractMultipartFile(req: IncomingMessage): Promise<{ filename: string; content: string } | null> {
+export async function extractMultipartFile(req: IncomingMessage): Promise<{ filename: string; content: Buffer } | null> {
   const contentType = req.headers["content-type"];
   if (!contentType?.startsWith("multipart/form-data")) {
     return null;
@@ -117,14 +135,12 @@ export async function extractMultipartFile(req: IncomingMessage): Promise<{ file
     let chunks: Buffer[] = [];
 
     req.on("data", (chunk) => {
-      chunks.push(chunk);
+      chunks.push(chunk as Buffer);
     });
 
     req.on("end", () => {
       const body = Buffer.concat(chunks).toString("binary");
 
-      // Simple multipart parsing - extract filename and content
-      // Format: boundary, headers, blank line, content, boundary
       const boundaryMatch = contentType.match(/boundary=([^;]+)/);
       if (!boundaryMatch) {
         resolve(null);
@@ -137,19 +153,17 @@ export async function extractMultipartFile(req: IncomingMessage): Promise<{ file
       for (const part of parts) {
         if (!part.trim() || part === "--") continue;
 
-        // Extract filename from Content-Disposition header
         const filenameMatch = part.match(/filename="([^"]+)"/);
         if (!filenameMatch) continue;
 
         const filename = filenameMatch[1];
-        // Content is after the blank line following headers
         const contentStart = part.indexOf("\r\n\r\n");
         if (contentStart === -1) continue;
 
-        // Content ends before the next boundary
         const content = part.slice(contentStart + 4).replace(/\r\n$/, "");
+        const contentBuffer = Buffer.from(content, "binary");
 
-        resolve({ filename, content: content.toString() });
+        resolve({ filename, content: contentBuffer });
         return;
       }
 

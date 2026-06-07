@@ -1,4 +1,4 @@
-/* Preventive Care — synthetic demo data layer.
+/* Preventive Care - synthetic demo data layer.
    Everything here is clearly synthetic / pre-loaded for demonstration.
    Mirrors the public-data strategy: postcodes.io geography, NHS Health Check
    rules, cached service + waiting-time samples. No live calls in the prototype. */
@@ -28,13 +28,13 @@ window.PPFallback.STATIC_DATA = (function () {
     conditions: [], // none recorded
     medications: [], // none recorded
     lifestyle: {
-      smoking: "Ex-smoker — quit 2019 (20 pack-years)",
+      smoking: "Ex-smoker - quit 2019 (20 pack-years)",
       smokingFlag: "history",
       alcohol: "~16 units / week",
       alcoholFlag: "raised",
-      activity: "Low — mostly sedentary",
+      activity: "Low - mostly sedentary",
       activityFlag: "raised",
-      familyHistory: "Father — heart attack, age 58",
+      familyHistory: "Father - heart attack, age 58",
       familyHistoryFlag: "raised",
     },
   };
@@ -153,15 +153,15 @@ window.PPFallback.STATIC_DATA = (function () {
     ],
     cadence: "Eligible adults are invited every 5 years.",
     action:
-      "If you haven't been invited, NHS guidance is to contact your GP practice — or your local authority if your practice doesn't offer it.",
-    source: "NHS.uk — NHS Health Check",
+      "If you haven't been invited, NHS guidance is to contact your GP practice - or your local authority if your practice doesn't offer it.",
+    source: "NHS.uk - NHS Health Check",
     bookUrl: "https://www.nhs.uk/tests-and-treatments/nhs-health-check/",
-    // Plain-rules eligibility check — each criterion shown transparently
+    // Plain-rules eligibility check - each criterion shown transparently
     criteria: [
       { label: "Aged 40–74", met: true, detail: "You're 52." },
       { label: "No existing CVD diagnosis", met: true, detail: "None recorded on your profile." },
       { label: "Not already monitored for a related condition", met: true, detail: "No diabetes, kidney or heart condition on file." },
-      { label: "No check in the last 5 years", met: "unknown", detail: "We can't see a previous check — worth confirming with your GP." },
+      { label: "No check in the last 5 years", met: "unknown", detail: "We can't see a previous check - worth confirming with your GP." },
     ],
   };
 
@@ -170,13 +170,13 @@ window.PPFallback.STATIC_DATA = (function () {
     state: "incomplete",
     headline: "CVD risk can't be calculated yet",
     body:
-      "A reliable 10-year cardiovascular risk estimate (QRISK3) needs your blood pressure and cholesterol — both are missing. Below is what we can already see.",
+      "A reliable 10-year cardiovascular risk estimate (QRISK3) needs your blood pressure and cholesterol - both are missing. Below is what we can already see.",
     knownFactors: [
       { label: "Age 52", weight: "context" },
       { label: "Male", weight: "context" },
       { label: "Family history of early heart disease", weight: "raises" },
       { label: "Ex-smoker (20 pack-years)", weight: "raises" },
-      { label: "BMI 28.4 — overweight", weight: "raises" },
+      { label: "BMI 28.4 - overweight", weight: "raises" },
       { label: "Raised waist (102 cm)", weight: "raises" },
       { label: "Low physical activity", weight: "raises" },
     ],
@@ -189,7 +189,7 @@ window.PPFallback.STATIC_DATA = (function () {
     ],
     readyHeadline: "Ready for a QRISK3 assessment",
     readyBody:
-      "All the inputs QRISK3 needs are now present. Your GP or nurse can calculate your formal 10-year risk — this tool deliberately leaves the number to a clinician.",
+      "All the inputs QRISK3 needs are now present. Your GP or nurse can calculate your formal 10-year risk - this tool deliberately leaves the number to a clinician.",
     safety:
       "This is an educational prevention prototype, not clinical decision support. It does not diagnose or recommend treatment.",
   };
@@ -221,7 +221,7 @@ window.PPFallback.STATIC_DATA = (function () {
       distanceKm: 0.4,
       relevantFor: ["NHS Health Check", "GP review"],
       open: "Open · closes 6:30pm",
-      whyHere: "Offers NHS Health Checks and routine GP review. You'd need to be registered to be seen — M13 9PL falls inside their catchment area, so you can register here as your home practice.",
+      whyHere: "Offers NHS Health Checks and routine GP review. You'd need to be registered to be seen - M13 9PL falls inside their catchment area, so you can register here as your home practice.",
       rating: "CQC: Good",
       nextAvail: "Health Check appts ~1 week (registered patients)",
       offers: ["NHS Health Check", "Cholesterol/lipid blood test", "Blood pressure", "Diabetes (HbA1c) test", "GP consultation"],
@@ -243,11 +243,11 @@ window.PPFallback.STATIC_DATA = (function () {
       distanceKm: 0.9,
       relevantFor: ["NHS Health Check", "GP review"],
       open: "Open · closes 6:00pm",
-      whyHere: "Alternative practice offering NHS Health Checks. M13 9PL sits at the edge of their catchment — you can register here if you'd rather, but only one practice is your registered home at a time.",
+      whyHere: "Alternative practice offering NHS Health Checks. M13 9PL sits at the edge of their catchment - you can register here if you'd rather, but only one practice is your registered home at a time.",
       rating: "CQC: Good",
       nextAvail: "Routine appts ~3 days (registered patients)",
       offers: ["NHS Health Check", "Blood pressure", "Cholesterol/lipid blood test", "GP consultation"],
-      eligibility: "Registered patients only. M13 9PL is at the boundary of their catchment — registration is usually accepted at the practice's discretion. Bring photo ID and proof of address.",
+      eligibility: "Registered patients only. M13 9PL is at the boundary of their catchment - registration is usually accepted at the practice's discretion. Bring photo ID and proof of address.",
       catchmentStatus: "boundary",
       access: ["Step-free access", "Accessible parking"],
       hours: "Mon–Fri 8:00–18:00",
@@ -266,11 +266,11 @@ window.PPFallback.STATIC_DATA = (function () {
       relevantFor: ["Free BP check", "Cholesterol pathway"],
       badge: "Free BP check",
       open: "Open · closes 7:00pm",
-      whyHere: "Free NHS blood-pressure check for anyone aged 40+ in England — no registration, no catchment, no appointment. This one is closest, but any participating pharmacy will do.",
+      whyHere: "Free NHS blood-pressure check for anyone aged 40+ in England - no registration, no catchment, no appointment. This one is closest, but any participating pharmacy will do.",
       rating: "Distance-selling & community pharmacy",
       nextAvail: "Walk-in today · any participating pharmacy works",
       offers: ["Free NHS blood pressure check (40+)", "Pharmacy First minor illness", "Cholesterol point-of-care test (£)", "Medicines advice"],
-      eligibility: "Free BP check for anyone 40+ in England. No registration, no booking, no postcode rules — walk into any participating pharmacy.",
+      eligibility: "Free BP check for anyone 40+ in England. No registration, no booking, no postcode rules - walk into any participating pharmacy.",
       access: ["Step-free access", "Private consultation room"],
       hours: "Mon–Sat 9:00–19:00 · Sun 11:00–16:00",
       bring: "Nothing. Takes about 5 minutes. Avoid caffeine just beforehand."
@@ -288,14 +288,14 @@ window.PPFallback.STATIC_DATA = (function () {
       relevantFor: ["Free BP check"],
       badge: "Free BP check",
       open: "Open · closes 6:00pm",
-      whyHere: "Same free NHS BP-check, on your commute along Oxford Road. No registration, no catchment — any participating pharmacy works.",
+      whyHere: "Same free NHS BP-check, on your commute along Oxford Road. No registration, no catchment - any participating pharmacy works.",
       rating: "Community pharmacy",
       nextAvail: "Walk-in today",
       offers: ["Free NHS blood pressure check (40+)", "Pharmacy First", "Flu & travel vaccines"],
       eligibility: "Free BP check for anyone 40+ in England. No registration or booking needed.",
       access: ["Step-free access"],
       hours: "Mon–Fri 8:30–18:00",
-      bring: "Nothing — just walk in."
+      bring: "Nothing - just walk in."
     },
     {
       id: "svc-mri",
@@ -309,11 +309,11 @@ window.PPFallback.STATIC_DATA = (function () {
       distanceKm: 0.5,
       relevantFor: ["Only if your GP refers you"],
       open: "A&E open 24 hours",
-      whyHere: "Your nearest acute hospital. There is no walk-in route for preventive checks here — planned cardiology / diabetes care happens by GP referral only. A&E is for emergencies, not health checks.",
+      whyHere: "Your nearest acute hospital. There is no walk-in route for preventive checks here - planned cardiology / diabetes care happens by GP referral only. A&E is for emergencies, not health checks.",
       rating: "Major teaching hospital",
       nextAvail: "By GP referral only",
       offers: ["Cardiology (referral)", "Diabetes medicine (referral)", "Outpatient diagnostics", "A&E 24h"],
-      eligibility: "Referral from your GP for planned cardiology / diabetes care. A&E is for emergencies only — not the route for routine checks.",
+      eligibility: "Referral from your GP for planned cardiology / diabetes care. A&E is for emergencies only - not the route for routine checks.",
       access: ["Step-free access", "Accessible parking", "Patient transport eligible"],
       hours: "A&E 24 hours · outpatients Mon–Fri",
       bring: "Referral letter and appointment reference."
@@ -330,7 +330,7 @@ window.PPFallback.STATIC_DATA = (function () {
       distanceKm: 9.2,
       relevantFor: ["Cardiology referrals"],
       open: "A&E open 24 hours",
-      whyHere: "Regional cardiology centre — relevant only if a GP later refers you for specialist heart assessment. Not a walk-in destination.",
+      whyHere: "Regional cardiology centre - relevant only if a GP later refers you for specialist heart assessment. Not a walk-in destination.",
       rating: "Specialist cardiothoracic centre",
       nextAvail: "By GP referral only",
       offers: ["Cardiology & cardiothoracic (referral)", "Heart investigations", "A&E 24h"],
@@ -344,11 +344,11 @@ window.PPFallback.STATIC_DATA = (function () {
   // ---- Waiting-time context (cached public sample) ---------------------
   const waitingTimes = {
     disclaimer:
-      "Provider-level public waiting-time signals — not a personal prediction. Actual waits depend on clinical need and referral pathway.",
+      "Provider-level public waiting-time signals - not a personal prediction. Actual waits depend on clinical need and referral pathway.",
     sourceNote: "Modelled on My Planned Care",
     rttStandard: 18, // NHS 18-week referral-to-treatment standard
     explainer:
-      "These are average waits each hospital reports for the whole pathway — from your GP's referral to your first appointment, and on to treatment. The NHS aims for treatment within 18 weeks. You can choose where you're referred.",
+      "These are average waits each hospital reports for the whole pathway - from your GP's referral to your first appointment, and on to treatment. The NHS aims for treatment within 18 weeks. You can choose where you're referred.",
     records: [
       {
         provider: "Wythenshawe Hospital",
@@ -385,7 +385,7 @@ window.PPFallback.STATIC_DATA = (function () {
       tone: "high",
       title: "Get your blood pressure checked",
       body:
-        "It's your single highest-value missing measurement. Adults 40+ in England can get a free BP check at a participating pharmacy — no appointment needed.",
+        "It's your single highest-value missing measurement. Adults 40+ in England can get a free BP check at a participating pharmacy - no appointment needed.",
       where: "Rusholme Pharmacy · 1.1 km · Free BP check",
       source: "NHS pharmacy BP check guidance",
     },
@@ -407,7 +407,7 @@ window.PPFallback.STATIC_DATA = (function () {
       body:
         "You appear eligible. This bundles BP, cholesterol, diabetes risk and a lifestyle review into one free appointment.",
       where: "Your GP practice or Manchester City Council",
-      source: "NHS.uk — NHS Health Check",
+      source: "NHS.uk - NHS Health Check",
     },
     {
       priority: 4,
@@ -425,7 +425,7 @@ window.PPFallback.STATIC_DATA = (function () {
     { q: "Am I eligible for an NHS Health Check, and how do I book one?", why: "You're 52 with no excluding condition, so you likely qualify for the 40–74 check.", url: "https://www.nhs.uk/tests-and-treatments/nhs-health-check/", link: "About the NHS Health Check" },
     { q: "Can I have my cholesterol and HDL ratio measured?", why: "Total and HDL cholesterol are needed for a proper CVD risk estimate and aren't on file yet.", url: "https://www.nhs.uk/conditions/high-cholesterol/", link: "High cholesterol" },
     { q: "Given my father's heart attack at 58, should my CVD risk be assessed formally with QRISK3?", why: "Early family heart disease is a recognised risk factor that QRISK3 accounts for.", url: "https://www.nhs.uk/conditions/cardiovascular-disease/", link: "Cardiovascular disease" },
-    { q: "What blood pressure range should I be aiming for at my age?", why: "Blood pressure isn't recorded — knowing your target helps you act on a reading.", url: "https://www.nhs.uk/conditions/high-blood-pressure-hypertension/", link: "Blood pressure" },
+    { q: "What blood pressure range should I be aiming for at my age?", why: "Blood pressure isn't recorded - knowing your target helps you act on a reading.", url: "https://www.nhs.uk/conditions/high-blood-pressure-hypertension/", link: "Blood pressure" },
     { q: "What support is available to increase my activity levels safely?", why: "You're averaging 5,240 steps against an 8,000 target.", url: "https://www.nhs.uk/live-well/exercise/", link: "Exercise guidance" },
   ];
 
@@ -585,12 +585,12 @@ window.PPFallback.STATIC_DATA = (function () {
 
   // ---- Inline detail for each vital (shown when a tile is expanded) ----
   const measurementDetail = {
-    bp: { what: "The pressure in your arteries. High blood pressure usually has no symptoms but is a leading, treatable cause of heart attack and stroke.", target: "Aim below 140/90 mmHg (clinic) for most adults under 80.", action: "Get a free pharmacy BP check (40+) — no appointment needed.", cta: "Find a free BP check", goLocal: true },
+    bp: { what: "The pressure in your arteries. High blood pressure usually has no symptoms but is a leading, treatable cause of heart attack and stroke.", target: "Aim below 140/90 mmHg (clinic) for most adults under 80.", action: "Get a free pharmacy BP check (40+) - no appointment needed.", cta: "Find a free BP check", goLocal: true },
     cholesterol: { what: "Fats in your blood. A high total-to-HDL ratio raises cardiovascular risk and is needed to estimate it accurately.", target: "Your GP will set targets based on your overall risk.", action: "Ask your GP for a lipid blood test, or have it done at an NHS Health Check.", cta: "See GP practices", goLocal: true },
-    bmi: { what: "Weight relative to height. A screening signal, not a diagnosis — muscle and build affect it.", target: "Healthy range 18.5–24.9 kg/m². You're in the 25–30 (overweight) band.", action: "Small sustained changes to activity and diet move this most." },
+    bmi: { what: "Weight relative to height. A screening signal, not a diagnosis - muscle and build affect it.", target: "Healthy range 18.5–24.9 kg/m². You're in the 25–30 (overweight) band.", action: "Small sustained changes to activity and diet move this most." },
     waist: { what: "Waist circumference reflects fat around your organs, which carries more cardiovascular risk than weight alone.", target: "Below 94 cm for men; 102 cm+ is high risk.", action: "Often improves alongside activity before weight does." },
-    hr: { what: "Beats per minute at rest. A lower resting rate generally reflects better cardiovascular fitness.", target: "Typical healthy adult range 60–80 bpm.", action: "No action needed — yours is normal. Trending stable." },
-    steps: { what: "Daily movement is one of the highest-yield preventive habits — it influences BP, weight, mood and more.", target: "Work toward 8,000 steps/day; any increase helps.", action: "Add a short daily walk; build gradually." },
+    hr: { what: "Beats per minute at rest. A lower resting rate generally reflects better cardiovascular fitness.", target: "Typical healthy adult range 60–80 bpm.", action: "No action needed - yours is normal. Trending stable." },
+    steps: { what: "Daily movement is one of the highest-yield preventive habits - it influences BP, weight, mood and more.", target: "Work toward 8,000 steps/day; any increase helps.", action: "Add a short daily walk; build gradually." },
   };
 
   // ---- Resources page content ------------------------------------------
@@ -602,7 +602,7 @@ window.PPFallback.STATIC_DATA = (function () {
       { title: "High cholesterol", desc: "Understanding lipids, HDL and the cholesterol ratio.", url: "https://www.nhs.uk/conditions/high-cholesterol/", tag: "Cholesterol" },
     ]},
     { group: "Take action", items: [
-      { title: "Free pharmacy BP checks", desc: "Anyone 40+ in England can get a free check — no appointment.", url: "https://www.nhs.uk/nhs-services/pharmacies/find-a-pharmacy-that-offers-free-blood-pressure-checks/", tag: "Blood pressure" },
+      { title: "Free pharmacy BP checks", desc: "Anyone 40+ in England can get a free check - no appointment.", url: "https://www.nhs.uk/nhs-services/pharmacies/find-a-pharmacy-that-offers-free-blood-pressure-checks/", tag: "Blood pressure" },
       { title: "Get active", desc: "NHS Live Well guidance on building activity safely.", url: "https://www.nhs.uk/live-well/exercise/", tag: "Lifestyle" },
       { title: "Quit smoking support", desc: "Free NHS tools and local stop-smoking services.", url: "https://www.nhs.uk/live-well/quit-smoking/", tag: "Lifestyle" },
       { title: "Healthier eating", desc: "Practical steps for weight, cholesterol and blood pressure.", url: "https://www.nhs.uk/live-well/eat-well/", tag: "Lifestyle" },
@@ -616,15 +616,15 @@ window.PPFallback.STATIC_DATA = (function () {
   // ---- Support page content --------------------------------------------
   const support = {
     urgent: [
-      { label: "Emergency — 999", desc: "Chest pain, stroke symptoms (FAST), severe breathlessness.", tone: "high", action: "tel:999" },
-      { label: "NHS 111", desc: "Urgent but not life-threatening — 24/7 advice.", tone: "attn", action: "tel:111" },
+      { label: "Emergency - 999", desc: "Chest pain, stroke symptoms (FAST), severe breathlessness.", tone: "high", action: "tel:999" },
+      { label: "NHS 111", desc: "Urgent but not life-threatening - 24/7 advice.", tone: "attn", action: "tel:111" },
     ],
     faqs: [
-      { q: "Is this a medical diagnosis?", a: "No. PreventPath is an educational prevention navigator. It flags what's missing and points to NHS pathways — it never diagnoses or recommends treatment. A clinician makes those decisions." },
+      { q: "Is this a medical diagnosis?", a: "No. PreventPath is an educational prevention navigator. It flags what's missing and points to NHS pathways - it never diagnoses or recommends treatment. A clinician makes those decisions." },
       { q: "Where does my data come from?", a: "Geography is resolved live from your postcode (postcodes.io). Eligibility and risk logic follow published NHS and NICE rules. Service and waiting-time samples are cached for the demo." },
-      { q: "How is my data handled?", a: "In this prototype nothing is sent anywhere — data stays in your browser session. A production version would use NHS login and follow NHS data-handling standards." },
+      { q: "How is my data handled?", a: "In this prototype nothing is sent anywhere - data stays in your browser session. A production version would use NHS login and follow NHS data-handling standards." },
       { q: "What does 'AI-assisted' mean?", a: "Short summaries (like the GP note and 'why this place' line) are drafted by a language model from your structured data, then checked against NHS rules. They're clearly tagged." },
-      { q: "Can I use my own data?", a: "Yes — switch to Live mode to start from scratch and link your NHS record or upload results. Demo mode uses a sample profile." },
+      { q: "Can I use my own data?", a: "Yes - switch to Live mode to start from scratch and link your NHS record or upload results. Demo mode uses a sample profile." },
     ],
     contact: [
       { label: "Help centre", desc: "Browse guides and answers.", icon: "info" },
@@ -638,7 +638,7 @@ window.PPFallback.STATIC_DATA = (function () {
     member: "Connected since 2024",
     settings: [
       { label: "Connected sources", value: "NHS login · Watch", icon: "link" },
-      { label: "Notifications", value: "On — reminders & results", icon: "info" },
+      { label: "Notifications", value: "On - reminders & results", icon: "info" },
       { label: "Data & privacy", value: "Stored in this session only", icon: "shield" },
       { label: "Accessibility", value: "System default", icon: "user" },
     ],
@@ -687,7 +687,7 @@ window.APP_DATA = window.PPFallback.STATIC_DATA;
    official NHS content, measurementDetail) from STATIC_DATA, but clears
    anything that's patient-specific. Connect stage renders this so that
    manually-entered measurements aren't joined onto a fictional patient's
-   values — i.e. "no autofill". */
+   values - i.e. "no autofill". */
 
 window.PPFallback.BLANK_DATA = (function () {
   var S = window.PPFallback.STATIC_DATA;
@@ -700,7 +700,7 @@ window.PPFallback.BLANK_DATA = (function () {
   };
   return {
     patient: {
-      name: "You", initials: "Yo", age: null, sex: "—", ethnicity: "—",
+      name: "You", initials: "Yo", age: null, sex: "N/A", ethnicity: "N/A",
       postcode: "M13 9PL", livesInEngland: true,
       // Map fallback so Connect's Leaflet doesn't crash before postcode lookup.
       location: S.patient.location,
@@ -767,7 +767,7 @@ window.PPFallback.BLANK_DATA = (function () {
 })();
 
 (function () {
-  // Monotonic request token — older requests resolve to a stale-flag so the
+  // Monotonic request token - older requests resolve to a stale-flag so the
   // caller can drop them. Prevents Demo→Default mid-load races.
   var REQ = 0;
 
@@ -840,7 +840,7 @@ window.PPFallback.BLANK_DATA = (function () {
     // Fire both calls in parallel.
     var profileP = window.PPApi.fetchProfile({ patient: patientInput, postcode: postcode });
     // "light" mode hits live ODS for services + per-ICB RTT waiting-time
-    // prose — so the Local Care page reflects the user's real postcode/ICB
+    // prose - so the Local Care page reflects the user's real postcode/ICB
     // instead of the cached Manchester sample.
     var contextP = window.PPApi.fetchContext(postcode, "light");
     var profileR, contextR;
@@ -885,11 +885,11 @@ window.PPFallback.BLANK_DATA = (function () {
     // Minimal presentation for a live form-driven user. UI components
     // expect name/initials/sex/etc so we fill in benign placeholders.
     return {
-      name: "You", initials: "Yo", sex: patientInput.sexAtBirth === "female" ? "Female" : (patientInput.sexAtBirth === "male" ? "Male" : "—"),
-      ethnicity: "—",
+      name: "You", initials: "Yo", sex: patientInput.sexAtBirth === "female" ? "Female" : (patientInput.sexAtBirth === "male" ? "Male" : "N/A"),
+      ethnicity: "N/A",
       postcode: postcode,
       location: null,
-      lifestyle: { smoking: patientInput.smokingStatus || "—", smokingFlag: patientInput.smokingStatus === "current" ? "raised" : "good" },
+      lifestyle: { smoking: patientInput.smokingStatus || "N/A", smokingFlag: patientInput.smokingStatus === "current" ? "raised" : "good" },
       heartRate: { value: 72, unit: "bpm", status: "good", spark: window.PPSeeds.pulseSpark(72), source: "Self-reported" },
       steps: { value: 6000, target: 8000, status: "raised", spark: [5500, 5800, 6200, 5900, 6100, 6000], trend: "flat" },
       bmiSpark: patientInput.bmi != null ? window.PPSeeds.spark6(patientInput.bmi, "flat") : [],

@@ -1,4 +1,4 @@
-/* App shell — top nav, stage stepper, page routing, Default/Demo/Live + login,
+/* App shell - top nav, stage stepper, page routing, Default/Demo/Live + login,
    plus backend data loading (delegated to window.loadAppData). */
 function App() {
   const [stage, setStage] = useState("connect");
@@ -43,7 +43,7 @@ function App() {
   // window.APP_DATA in place + bumps dataVersion so all children remount.
   // Returns the loader result (or null) so callers can branch on success.
   async function runLoad(opts) {
-    // Default + initial live-blank resolve synchronously — skip the spinner so
+    // Default + initial live-blank resolve synchronously - skip the spinner so
     // the user sees a clean state instantly. We still bump dataVersion so the
     // children re-read window.APP_DATA.
     const fast = opts && (opts.mode === "default" || (opts.mode === "live" && (!opts.patientInput || !opts.postcode)));
@@ -92,7 +92,7 @@ function App() {
       case "cache": return { label: "Cache", tone: "info" };
       case "safe_fallback": return { label: "Cached", tone: "info" };
       case "default": return { label: "Default", tone: "muted" };
-      default: return { label: src || "—", tone: "muted" };
+      default: return { label: src || "N/A", tone: "muted" };
     }
   }
 
@@ -106,7 +106,7 @@ function App() {
       setReportReady(false);
       setStage("connect");
       setPage("journey");
-      // Swap to the empty Live shell — Connect tiles show "Not recorded"
+      // Swap to the empty Live shell - Connect tiles show "Not recorded"
       // instead of letting the prior mode's data leak through.
       runLoad({ mode: "live" });
     } else if (next === "demo") {
@@ -137,12 +137,12 @@ function App() {
 
   // Live form submit (called from Connect stage when user has filled the
   // patient form and clicked "Generate report"). On success we mark the
-  // report ready and navigate to Stage 2 — the report sticks until the
+  // report ready and navigate to Stage 2 - the report sticks until the
   // user reloads the mode or signs out.
   async function submitLive(patientInput, postcode) {
     setIngested(true);
     const r = await runLoad({ mode: "live", patientInput, postcode });
-    if (!r) return; // race-guarded or threw — leave the user on Connect
+    if (!r) return; // race-guarded or threw - leave the user on Connect
     const ok = r.source && r.source !== "live-blank" && r.source !== "safe_fallback" && r.source !== "stale";
     if (ok) {
       setReportReady(true);
@@ -208,14 +208,14 @@ function App() {
 
         <div className="appbar-right">
           <div className="mode-seg" role="tablist" aria-label="Data mode">
-            <button className={"mode-opt" + (mode === "default" ? " mode-opt--on" : "")} onClick={() => setMode("default")} title="The pristine showcase demo — instant, no network calls.">Default</button>
+            <button className={"mode-opt" + (mode === "default" ? " mode-opt--on" : "")} onClick={() => setMode("default")} title="The pristine showcase demo - instant, no network calls.">Default</button>
             <button className={"mode-opt" + (mode === "demo" ? " mode-opt--on" : "")} onClick={() => setMode("demo")} title="Randomised mock patient, but the backend runs for real.">Demo</button>
             {mode === "demo" && (
               <button className={"mode-randomize" + (isLoading ? " spin" : "")} onClick={randomize} disabled={isLoading} title="Pick a new random patient" aria-label="Randomise patient">
                 <Icon name="check" size={11} stroke={2.5} />
               </button>
             )}
-            <button className={"mode-opt" + (mode === "live" ? " mode-opt--on" : "")} onClick={() => setMode("live")} title="Sign in and fill the form — your inputs hit the backend.">
+            <button className={"mode-opt" + (mode === "live" ? " mode-opt--on" : "")} onClick={() => setMode("live")} title="Sign in and fill the form - your inputs hit the backend.">
               <span className={mode === "live" ? "live-dot" : ""} /> Live
             </button>
           </div>

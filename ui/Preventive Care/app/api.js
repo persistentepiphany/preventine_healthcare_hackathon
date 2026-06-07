@@ -1,6 +1,6 @@
-/* PreventPath UI ↔ backend client (browser globals — no ES module).
+/* PreventPath UI ↔ backend client (browser globals - no ES module).
    Mirrors docs/ui-api-client.js, but exposes window.PPApi.* so it can load
-   from a plain <script> tag alongside Babel-standalone. No throws — every
+   from a plain <script> tag alongside Babel-standalone. No throws - every
    call resolves to { ok, data?, status, error?, issues? }. */
 
 (function () {

@@ -1,7 +1,7 @@
 /* Resources, Support, Profile, and Login pages */
 
 /* ---------- Login (Live mode gate) ----------
-   Prototype credentials — intentionally hard-coded so the deployed demo
+   Prototype credentials - intentionally hard-coded so the deployed demo
    always works. Not sensitive: this is a no-backend, no-PII prototype. */
 const DEMO_EMAIL = "testuser@gmail.com";
 const DEMO_PASSWORD = "testpass123";
@@ -43,7 +43,7 @@ function Login({ app }) {
         <span className="login-mark"><Icon name="shield" size={26} stroke={1.8} /></span>
         <h1 className="login-title">Sign in</h1>
         <p className="login-sub">
-          Live mode unlocks your personal report. This is an educational prototype — your sign-in
+          Live mode unlocks your personal report. This is an educational prototype - your sign-in
           stays in your browser.
         </p>
         {step === "idle" ? (
@@ -77,7 +77,7 @@ function Login({ app }) {
               <div className="login-demo-creds-row"><span>Password</span><code>{DEMO_PASSWORD}</code></div>
               <button type="button" className="login-demo-fill" onClick={fillDemo}>Fill demo credentials</button>
             </div>
-            <div className="login-foot"><Icon name="info" size={12} stroke={1.8} /> Educational prototype — not connected to live NHS systems.</div>
+            <div className="login-foot"><Icon name="info" size={12} stroke={1.8} /> Educational prototype - not connected to live NHS systems.</div>
           </form>
         ) : (
           <div className="login-engine">
@@ -128,7 +128,7 @@ function Support() {
       <div className="page-head">
         <div className="stage-eyebrow">Help</div>
         <h1 className="stage-title">Support</h1>
-        <p className="stage-lede">Get help using PreventPath — and know where to turn for urgent care.</p>
+        <p className="stage-lede">Get help using PreventPath - and know where to turn for urgent care.</p>
       </div>
 
       <div className="urgent-row">
