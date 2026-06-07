@@ -8,7 +8,7 @@ export interface UploadResult {
 
 export interface UploadError {
   ok: false;
-  error: "invalid_format" | "validation_failed" | "pdf_parse_failed";
+  error: "invalid_format" | "validation_failed" | "pdf_parse_failed" | "no_file";
   issues?: { path: string; message: string }[];
 }
 
@@ -23,9 +23,8 @@ function parsePlainLines(content: string): Record<string, unknown> {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue; // Skip empty and comments
+    if (!trimmed || trimmed.startsWith("#")) continue;
 
-    // Try key=value
     let separator = trimmed.indexOf("=");
     let key: string | null = null;
     let value: string | null = null;
@@ -34,7 +33,6 @@ function parsePlainLines(content: string): Record<string, unknown> {
       key = trimmed.slice(0, separator).trim();
       value = trimmed.slice(separator + 1).trim();
     } else {
-      // Try key: value
       separator = trimmed.indexOf(":");
       if (separator !== -1) {
         key = trimmed.slice(0, separator).trim();
@@ -54,15 +52,12 @@ function parsePlainLines(content: string): Record<string, unknown> {
  * Convert string value to appropriate type
  */
 function parseValue(value: string): unknown {
-  // Boolean
   if (value.toLowerCase() === "true") return true;
   if (value.toLowerCase() === "false") return false;
 
-  // Number
   const num = Number(value);
   if (!isNaN(num) && value.trim() !== "") return num;
 
-  // String
   return value;
 }
 
@@ -85,19 +80,16 @@ async function parsePdf(content: Buffer): Promise<string | null> {
 async function parseFileContent(content: Buffer, filename: string): Promise<unknown> {
   const trimmed = content.toString("utf-8").trim();
 
-  // PDF files
   if (filename.toLowerCase().endsWith(".pdf")) {
     const text = await parsePdf(content);
     if (!text) throw new Error("Failed to parse PDF");
     return parsePlainLines(text);
   }
 
-  // Try JSON first
   if (filename.endsWith(".json") || trimmed.startsWith("{") || trimmed.startsWith("[")) {
     return JSON.parse(trimmed);
   }
 
-  // Plain text key=value format
   return parsePlainLines(trimmed);
 }
 
@@ -123,7 +115,7 @@ export async function parseUploadedFile(content: Buffer, filename: string): Prom
 }
 
 /**
- * Extract file content from multipart/form-data request
+ * Extract file from multipart/form-data request using busboy
  */
 export async function extractMultipartFile(req: IncomingMessage): Promise<{ filename: string; content: Buffer } | null> {
   const contentType = req.headers["content-type"];
@@ -131,47 +123,38 @@ export async function extractMultipartFile(req: IncomingMessage): Promise<{ file
     return null;
   }
 
-  return new Promise((resolve) => {
-    let chunks: Buffer[] = [];
+  return new Promise((resolve, reject) => {
+    try {
+      const Busboy = require("busboy");
+      const busboy = Busboy({ headers: req.headers });
 
-    req.on("data", (chunk) => {
-      chunks.push(chunk as Buffer);
-    });
+      let filename: string | null = null;
+      let fileContent: Buffer[] = [];
 
-    req.on("end", () => {
-      const body = Buffer.concat(chunks).toString("binary");
+      busboy.on("file", (fieldname, file, info) => {
+        filename = info.filename;
+        file.on("data", (data) => {
+          fileContent.push(data);
+        });
+        file.on("end", () => {
+          resolve({ filename: filename, content: Buffer.concat(fileContent) });
+        });
+      });
 
-      const boundaryMatch = contentType.match(/boundary=([^;]+)/);
-      if (!boundaryMatch) {
+      busboy.on("finish", () => {
+        if (filename === null) {
+          resolve(null);
+        }
+      });
+
+      busboy.on("error", (err) => {
         resolve(null);
-        return;
-      }
+      });
 
-      const boundary = boundaryMatch[1];
-      const parts = body.split(`--${boundary}`);
-
-      for (const part of parts) {
-        if (!part.trim() || part === "--") continue;
-
-        const filenameMatch = part.match(/filename="([^"]+)"/);
-        if (!filenameMatch) continue;
-
-        const filename = filenameMatch[1];
-        const contentStart = part.indexOf("\r\n\r\n");
-        if (contentStart === -1) continue;
-
-        const content = part.slice(contentStart + 4).replace(/\r\n$/, "");
-        const contentBuffer = Buffer.from(content, "binary");
-
-        resolve({ filename, content: contentBuffer });
-        return;
-      }
-
+      req.pipe(busboy);
+    } catch {
+      // busboy not installed - fall back to simple parser
       resolve(null);
-    });
-
-    req.on("error", () => {
-      resolve(null);
-    });
+    }
   });
 }

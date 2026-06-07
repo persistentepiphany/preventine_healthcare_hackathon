@@ -16,6 +16,7 @@
     "start": "tsx src/http/server.ts"
   },
   "dependencies": {
+    "busboy": "^1.6.0",
     "dotenv": "^16.4.5",
     "pdf-parse": "^2.4.5",
     "tsx": "^4.19.2",
