@@ -180,6 +180,20 @@ function Support() {
 function Profile({ app, go }) {
   const D = window.APP_DATA;
   const { patient, account, measurements } = D;
+
+  // Read location override from localStorage (same as connect.jsx)
+  function lsGet(key, fallback) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+  const locOverride = lsGet("pp-location-override", null);
+  const location = locOverride || patient.location;
+  const postcode = locOverride ? locOverride.postcode : patient.postcode;
+
   const recorded = measurements.filter((m) => m.status !== "missing").length;
   return (
     <div className="stage stage--page">
@@ -192,7 +206,7 @@ function Profile({ app, go }) {
         <span className="avatar-xl">{patient.initials}</span>
         <div className="profile-id">
           <div className="profile-name">{patient.name}</div>
-          <div className="profile-meta">{patient.age} · {patient.sex} · {patient.postcode} · {patient.location.localAuthority}</div>
+          <div className="profile-meta">{patient.age} · {patient.sex} · {postcode} · {location.localAuthority}</div>
           <div className="profile-tags">
             <span className="profile-tag"><span className={app.mode === "live" ? "live-dot" : "prov-dot prov-dot--cache"} /> {app.mode === "live" ? "Live mode" : "Demo mode"}</span>
             <span className="profile-tag">{account.plan}</span>
